@@ -60,19 +60,19 @@ const Register = () => {
             <ul className="register__list">
                 <li className="register__item">
                     <p className="register__name">Ім'я</p>
-                    <input type="text" name="name" className="register__input" placeholder="Віктор" onChange={handleChange} />
+                    <input type="text" name="name" className="register__input" placeholder="Яков" onChange={handleChange} />
                 </li>
                 <li className="register__item">
                     <p className="register__name">Прізвище</p>
-                    <input type="text" name="surname" className="register__input" placeholder="Цой" onChange={handleChange} />
+                    <input type="text" name="surname" className="register__input" placeholder="Деркаченко" onChange={handleChange} />
                 </li>
                 <li className="register__item">
                     <p className="register__name">Юзернейм</p>
-                    <input type="text" name="username" className="register__input" placeholder="viktortsoi2106" onChange={handleChange} />
+                    <input type="text" name="username" className="register__input" placeholder="Yakov29" onChange={handleChange} />
                 </li>
                 <li className="register__item">
                     <p className="register__name">Email</p>
-                    <input type="email" name="email" className="register__input" placeholder="viktortsoi@gmail.com" onChange={handleChange} />
+                    <input type="email" name="email" className="register__input" placeholder="yakov@gmail.com" onChange={handleChange} />
                 </li>
                 <li className="register__item">
                     <p className="register__name">Пароль</p>
