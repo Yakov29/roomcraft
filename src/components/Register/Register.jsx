@@ -49,8 +49,8 @@ const Register = () => {
         };
 
         localStorage.setItem("user", JSON.stringify(userProfile));
-        alert("Реєстрація пройшла успішно!");
-        navigate("/"); 
+        navigate("/");
+        document.location.reload()
     };
 
     return (
@@ -84,15 +84,19 @@ const Register = () => {
                 </li>
                 <li className="register__item">
                     <p className="register__name">Аватар</p>
-                    <input type="file" accept="image/*" className="register__input" onChange={handleImageUpload} />
+                    <label className="avatar-upload">
+                        <span className="avatar-upload__text">Завантажити аватар</span>
+                        <input type="file" accept="image/*" className="avatar-upload__input" onChange={handleImageUpload} />
+                    </label>
                     {formData.avatar && (
                         <img
                             src={formData.avatar}
                             alt="avatar preview"
-                            style={{ width: "80px", height: "80px", marginTop: "10px", borderRadius: "50%" }}
+                            className="avatar-preview"
                         />
                     )}
                 </li>
+
             </ul>
             <button className="register__button" onClick={handleRegister}>
                 Зареєструватись

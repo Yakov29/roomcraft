@@ -1,0 +1,183 @@
+.profile {
+  text-align: center;
+  height: 100vh;
+  padding-top: 150px;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--background-color);
+  z-index: 1;
+}
+
+.profile::before {
+  content: "";
+  position: absolute;
+  top: -80%;
+  left: -80%;
+  width: 260%;
+  height: 260%;
+  background:
+    radial-gradient(circle 50px at 5% 10%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 45px at 12% 35%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 60px at 20% 65%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 38px at 32% 20%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 42px at 40% 50%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 30px at 52% 10%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 58px at 62% 40%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 36px at 72% 75%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 42px at 85% 25%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 60px at 92% 60%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 50px at 80% 10%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 40px at 25% 85%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 36px at 15% 75%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 42px at 45% 80%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 48px at 68% 22%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 52px at 88% 45%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 46px at 30% 10%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 55px at 60% 70%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 50px at 75% 15%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 42px at 10% 55%, var(--primary-dark) 99%, transparent 100%);
+  animation: moveCircles 25s linear infinite;
+  z-index: 0;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+@keyframes moveCircles {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(50px, 30px) rotate(180deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(360deg);
+  }
+}
+
+.profile__title {
+    font-size: 32px;
+    color: #E1E6F0;
+}
+
+.profile__avatar {
+    border-radius: 50%;
+    width: 150px;
+    height: 150px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 30px;
+}
+
+.profile__list {
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+.profile__input {
+    text-align: center;
+    border: 1px solid #2C3A59;
+    padding: 10px 100px;
+    border-radius: 10px;
+    background-color: #1a2338;
+    color: #E1E6F0;
+    font-size: 16px;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.profile__input::placeholder {
+    color: #E1E6F0;
+}
+
+.profile__input:focus {
+    outline: none;
+    background-color: #28354a;
+    box-shadow: 0 0 8px #2D9CDB;
+}
+
+.profile__change,
+.profile__delete,
+.profile__apply,
+.profile__reset {
+    padding: 15px 50px;
+    color: #E1E6F0;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(228, 131, 27, 0.3);
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+    margin-top: 50px;
+    opacity: 0;
+    animation: fadeInUp 0.5s forwards;
+}
+
+.profile__change {
+    background-color: #ce670e;
+    margin-right: 20px;
+    animation-delay: 0.1s;
+}
+
+.profile__delete {
+    background-color: #ce0e0e;
+    margin-left: 20px;
+    box-shadow: 0 4px 12px rgba(228, 27, 27, 0.3);
+    animation-delay: 0.1s;
+}
+
+.profile__apply {
+    background-color: #2D9CDB;
+    box-shadow: 0 4px 12px rgba(45, 156, 219, 0.4);
+    animation-delay: 0.1s;
+}
+
+.profile__reset {
+    background-color: #555555;
+    box-shadow: 0 4px 12px rgba(80, 80, 80, 0.4);
+    animation-delay: 0.1s;
+}
+
+.profile__change:hover {
+    background-color: #c16815;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 6px 15px rgba(193, 104, 21, 0.6);
+}
+
+.profile__delete:hover {
+    background-color: #c11515;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 6px 15px rgba(193, 21, 21, 0.6);
+}
+
+.profile__apply:hover {
+    background-color: #1a7ac9;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 6px 15px rgba(26, 122, 201, 0.6);
+}
+
+.profile__reset:hover {
+    background-color: #777777;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 6px 15px rgba(119, 119, 119, 0.6);
+}
+
+.profile__buttons {
+    display: inline-flex;
+    gap: 20px;
+    margin-top: 30px;
+    justify-content: center;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

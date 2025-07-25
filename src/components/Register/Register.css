@@ -1,8 +1,59 @@
 .register {
-    text-align: center;
-    height: 90vh;
-    padding-top: 100px;
+  text-align: center;
+  height: 100vh;
+  padding-top: 150px;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--background-color);
+  z-index: 1;
 }
+
+.register::before {
+  content: "";
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  width: 300%;
+  height: 300%;
+  background:
+    radial-gradient(circle 50px at 5% 10%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 45px at 12% 35%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 60px at 20% 65%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 38px at 32% 20%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 42px at 40% 50%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 30px at 52% 10%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 58px at 62% 40%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 36px at 72% 75%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 42px at 85% 25%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 60px at 92% 60%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 50px at 80% 10%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 40px at 25% 85%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 36px at 15% 75%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 42px at 45% 80%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 48px at 68% 22%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 52px at 88% 45%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 46px at 30% 10%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 55px at 60% 70%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 50px at 75% 15%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 42px at 10% 55%, var(--primary-dark) 99%, transparent 100%);
+  animation: moveCircles 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+@keyframes moveCircles {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(30px, 20px) rotate(180deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(360deg);
+  }
+}
+
 
 .register__title {
     color: #E1E6F0;
@@ -79,4 +130,40 @@
 .register__button:hover {
     background-color: #155ec1;
     transform: translateY(-2px);
+}
+
+
+.avatar-upload {
+  display: inline-block;
+  background-color: #1B74E4;
+  color: #E1E6F0;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(27, 116, 228, 0.3);
+  width: 100%;
+  max-width: 500px;
+  text-align: center;
+}
+
+.avatar-upload:hover {
+  background-color: #155ec1;
+  transform: translateY(-2px);
+}
+
+.avatar-upload__input {
+  display: none;
+}
+
+.avatar-preview {
+  width: 80px;
+  height: 80px;
+  margin-top: 10px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 2px #2C3A59, 0 4px 8px rgba(0, 0, 0, 0.2);
 }

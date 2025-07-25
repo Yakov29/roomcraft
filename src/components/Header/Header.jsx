@@ -32,7 +32,7 @@ const Header = () => {
                 </ul>
 
                 {user ? (
-                    <Link to="/profile">
+                    <Link to="/user">
                         <img
                             src={user.avatar}
                             alt="Аватар"
