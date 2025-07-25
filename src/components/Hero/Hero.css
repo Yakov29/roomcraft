@@ -6,7 +6,7 @@
 }
 
 .hero {
-  height: 100vh;
+  height: 90vh;
   position: relative;
   overflow: hidden;
   background-color: var(--background-color);
@@ -27,20 +27,21 @@
   width: 200%;
   height: 200%;
   background:
-    radial-gradient(circle 8px at 5% 15%, var(--accent) 99%, transparent 100%),
-    radial-gradient(circle 6px at 15% 40%, var(--primary-dark) 99%, transparent 100%),
-    radial-gradient(circle 7px at 25% 70%, var(--primary-darker) 99%, transparent 100%),
-    radial-gradient(circle 5px at 35% 25%, var(--accent) 99%, transparent 100%),
-    radial-gradient(circle 6px at 45% 55%, var(--primary-dark) 99%, transparent 100%),
-    radial-gradient(circle 4px at 55% 15%, var(--primary-darker) 99%, transparent 100%),
-    radial-gradient(circle 8px at 65% 45%, var(--accent) 99%, transparent 100%),
-    radial-gradient(circle 5px at 75% 75%, var(--primary-dark) 99%, transparent 100%),
-    radial-gradient(circle 6px at 85% 30%, var(--primary-darker) 99%, transparent 100%),
-    radial-gradient(circle 7px at 90% 65%, var(--accent) 99%, transparent 100%);
+    radial-gradient(circle 24px at 5% 15%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 18px at 15% 40%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 21px at 25% 70%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 15px at 35% 25%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 18px at 45% 55%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 12px at 55% 15%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 24px at 65% 45%, var(--accent) 99%, transparent 100%),
+    radial-gradient(circle 15px at 75% 75%, var(--primary-dark) 99%, transparent 100%),
+    radial-gradient(circle 18px at 85% 30%, var(--primary-darker) 99%, transparent 100%),
+    radial-gradient(circle 21px at 90% 65%, var(--accent) 99%, transparent 100%);
   animation: moveCircles 20s linear infinite;
   z-index: 0;
   opacity: 0.55;
 }
+
 
 @keyframes moveCircles {
   0% {

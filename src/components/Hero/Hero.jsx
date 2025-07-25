@@ -66,7 +66,7 @@ const Hero = () => {
                     <p className="hero__subtext">Більше 10 000 користувачів вже створили свої віртуальні кімнати ✨</p>
                 </div>
                 <div className="hero__preview">
-                    <img src="https://hips.hearstapps.com/hmg-prod/images/cute-room-ideas-1677096334.png?crop=0.597xw:1.00xh;0.134xw,0&resize=640:*" alt="Room Preview" />
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/React-icon.svg/1150px-React-icon.svg.png" alt="Room Preview" />
                 </div>
             </Container>
             <button className="hero__arrow"><FaArrowDown/></button>

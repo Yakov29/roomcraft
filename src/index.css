@@ -13,6 +13,11 @@ html, body {
   background-color: #fff;
   color: #000;
   background-color: #121924	;
+ 
+}
+
+body{
+ padding-top: 85px;
 }
 
 img, picture, video, canvas, svg {

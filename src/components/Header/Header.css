@@ -25,6 +25,8 @@ header .container {
     font-weight: 700;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     transition: transform 0.3s ease;
+    width: 50px;
+    border-radius: 50%;
 }
 
 .header__home:hover {
@@ -66,11 +68,12 @@ header .container {
 }
 
 .header__start {
+    padding-top: 15px;
+    padding-bottom: 15px;
     margin-left: 30px;
     background-color: #1B74E4;
     padding-left: 20px;
     padding-right: 20px;
-    height: 48px;
     color: #E1E6F0;
     border-radius: 8px;
     font-weight: 600;
@@ -84,4 +87,16 @@ header .container {
 .header__start:hover {
     background-color: #155ec1;
     transform: translateY(-2px);
+}
+
+.header__avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+}
+
+.header__avatar:hover {
+    transform: scale(1.05);
 }
