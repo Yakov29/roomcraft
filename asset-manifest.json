@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.css": "/static/css/main.918b31c0.css",
-    "main.js": "/static/js/main.091cf3e8.js",
-    "index.html": "/index.html",
-    "main.918b31c0.css.map": "/static/css/main.918b31c0.css.map",
-    "main.091cf3e8.js.map": "/static/js/main.091cf3e8.js.map"
+    "main.css": "/roomcraft/static/css/main.918b31c0.css",
+    "main.js": "/roomcraft/static/js/main.091cf3e8.js",
+    "index.html": "/roomcraft/index.html",
+    "main.918b31c0.css.map": "/roomcraft/static/css/main.918b31c0.css.map",
+    "main.091cf3e8.js.map": "/roomcraft/static/js/main.091cf3e8.js.map"
   },
   "entrypoints": [
     "static/css/main.918b31c0.css",
