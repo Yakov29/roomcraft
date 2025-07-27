@@ -1,6 +1,7 @@
 {
   "name": "roomcraft",
   "version": "0.1.0",
+  "homepage": "https://yakov29.github.io/",
   "private": true,
   "dependencies": {
     "@react-three/drei": "^10.6.1",
@@ -12,6 +13,7 @@
     "@types/three": "^0.178.1",
     "gh-pages": "^6.3.0",
     "leva": "^0.10.0",
+    "netlify-cli": "^22.4.0",
     "nprogress": "^0.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

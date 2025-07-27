@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import NProgress from "nprogress";
 import "nprogress/nprogress.css";
+import logo from "./logo.png"
 
 import Homepage from "./pages/Homepage/Homepage";
 import GetStarted from "./pages/GetStarted/GetStarted";

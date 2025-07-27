@@ -3,6 +3,7 @@ import Container from "../Container/Container";
 import "./Hero.css";
 import { FaArrowDown } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
+import Logo from "../../logo.png"
 
 const phrases = [
     "RoomCraft — Створи простір, що надихає ✨",
@@ -96,7 +97,7 @@ const Hero = () => {
                 </div>
                 <div className="hero__preview">
                     <img
-                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/React-icon.svg/1150px-React-icon.svg.png"
+                        src={Logo}
                         alt="Room Preview"
                     />
                 </div>
