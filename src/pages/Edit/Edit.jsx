@@ -680,6 +680,10 @@ export default function Edit() {
 
     const roomId = useMemo(() => parseFloat(id), [id]);
 
+    useEffect(() => {
+        document.title = "RoomCraft | Редактор"
+    })
+
 
 
 

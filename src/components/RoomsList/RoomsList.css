@@ -82,13 +82,15 @@
     z-index: 10;
 }
 
-.rooms__button:last-child{
-    margin-left: 30px;
-}
 
-.rooms__button:hover {
+
+/* .rooms__button:hover {
     background-color: #155ec1;
     transform: translateY(-2px);
+} */
+
+.rooms__button:last-child{
+    margin-left: 30px;
 }
 
 .rooms__none {
