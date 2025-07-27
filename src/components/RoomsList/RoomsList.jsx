@@ -64,7 +64,6 @@ const RoomsList = () => {
           localStorage.setItem("user", JSON.stringify(updatedUser));
           setRooms(updatedRooms);
           setUserData(updatedUser);
-          alert(`Кімнату "${uploadedRoom.name}" успішно імпортовано!`);
         } else {
           alert("Невірний формат файлу кімнати. Переконайтеся, що файл містить коректні дані кімнати (id, name).");
         }
