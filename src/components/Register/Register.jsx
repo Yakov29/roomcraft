@@ -32,6 +32,10 @@ const Register = () => {
         }
     };
 
+    const generateId = () => {
+        return Math.floor(10000000 + Math.random() * 90000000).toString();
+    };
+
     const handleRegister = () => {
         if (formData.password !== formData.repeat) {
             alert("Паролі не співпадають");
@@ -39,6 +43,7 @@ const Register = () => {
         }
 
         const userProfile = {
+            id: generateId(),
             name: formData.name,
             surname: formData.surname,
             username: formData.username,
@@ -50,7 +55,7 @@ const Register = () => {
 
         localStorage.setItem("user", JSON.stringify(userProfile));
         navigate("/");
-        document.location.reload()
+        document.location.reload();
     };
 
     return (
@@ -96,7 +101,6 @@ const Register = () => {
                         />
                     )}
                 </li>
-
             </ul>
             <button className="register__button" onClick={handleRegister}>
                 Зареєструватись

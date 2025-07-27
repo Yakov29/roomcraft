@@ -181,3 +181,8 @@
         transform: translateY(0);
     }
 }
+
+
+.profile__id{
+    color: #E1E6F0;
+}

@@ -38,16 +38,16 @@ const Profile = () => {
         }
     };
 
-   const handleAvatarClick = () => {
-    if (editable && fileInputRef.current) {
-        fileInputRef.current.click();
-    } else if (!editable && formData.avatar && formData.avatar.startsWith("data:image")) {
-        const newWindow = window.open();
-        if (newWindow) {
-            newWindow.document.write(`<img src="${formData.avatar}" style="max-width: 100%; height: auto;" />`);
+    const handleAvatarClick = () => {
+        if (editable && fileInputRef.current) {
+            fileInputRef.current.click();
+        } else if (!editable && formData.avatar && formData.avatar.startsWith("data:image")) {
+            const newWindow = window.open();
+            if (newWindow) {
+                newWindow.document.write(`<img src="${formData.avatar}" style="max-width: 100%; height: auto;" />`);
+            }
         }
-    }
-};
+    };
 
 
 
@@ -79,6 +79,7 @@ const Profile = () => {
 
     if (!user) return null;
 
+
     return (
         <section className="profile">
             <Container>
@@ -99,6 +100,8 @@ const Profile = () => {
                             onChange={handleAvatarChange}
                         />
                     )}
+
+                    <p className="profile__id">ID: {formData.id}</p>
 
                     <h2 className="profile__title">@{formData.username}</h2>
 
@@ -179,6 +182,7 @@ const Profile = () => {
             </Container>
         </section>
     );
+
 };
 
 export default Profile;
