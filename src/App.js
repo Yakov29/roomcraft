@@ -11,7 +11,8 @@ import User from "./pages/User/User";
 import Rooms from "./pages/Rooms/Rooms";
 import Create from "./pages/Create/Create";
 import Edit from "./pages/Edit/Edit";
-import ToHome from "./components/ToHome/ToHome";
+import Footer from "./components/Footer/Footer";
+
 
 function App() {
   const location = useLocation();
@@ -60,6 +61,7 @@ function App() {
         <Route path="/create" element={<Create />} />
         <Route path="/edit/:id" element={<Edit />} />
       </Routes>
+
     </div>
   );
 }
