@@ -36,9 +36,20 @@ const Hero = () => {
 
         const userData = localStorage.getItem("user");
         if (userData) {
-            const user = JSON.parse(userData);
-            setHasUser(true);
-            setUserId(user.id);
+            try {
+                const user = JSON.parse(userData);
+                if (user && user.id) {
+                    setHasUser(true);
+                    setUserId(user.id);
+                } else {
+                    setHasUser(false);
+                    setUserId(null);
+                }
+            } catch (error) {
+                console.error("Failed to parse user data from localStorage", error);
+                setHasUser(false);
+                setUserId(null);
+            }
         } else {
             setHasUser(false);
             setUserId(null);
@@ -79,10 +90,16 @@ const Hero = () => {
         if (hasUser && userId) {
             navigate(`/user/${userId}/rooms`);
         } else {
-            navigate("/register");
+            navigate('/get-started');
         }
     };
 
+    const handleScrollDown = () => {
+        const aboutSection = document.getElementById("about");
+        if (aboutSection) {
+            aboutSection.scrollIntoView({ behavior: "smooth" });
+        }
+    };
 
     return (
         <section className="hero" data-aos="fade-up">
@@ -99,11 +116,10 @@ const Hero = () => {
                     <button
                         className="hero__button"
                         onClick={handleButtonClick}
-                        disabled={!hasUser}
                         data-aos="zoom-in"
                         data-aos-delay="500"
                     >
-                        {hasUser ? "Відкрити редактор" : "Почати створення"}
+                        {hasUser ? "Відкрити редактор" : "Почати"}
                     </button>
 
                     <p className="hero__subtext" data-aos="fade-up" data-aos-delay="600">
@@ -117,7 +133,7 @@ const Hero = () => {
                     />
                 </div>
             </Container>
-            <button className="hero__arrow">
+            <button className="hero__arrow" onClick={handleScrollDown}>
                 <FaArrowDown />
             </button>
         </section>
