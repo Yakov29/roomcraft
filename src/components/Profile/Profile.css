@@ -1,12 +1,15 @@
 .profile {
   text-align: center;
-  height: 100vh;
-  padding-top: 150px;
-  padding-bottom: 100px;
+  min-height: 100vh;
+  padding: 100px 20px 110px;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
   background-color: var(--background-color);
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .profile::before {
@@ -125,15 +128,18 @@
   position: fixed;
   bottom: 0;
   left: 0;
-  width: 100%;
-  padding: 12px 20px;
+  right: 0;
   display: flex;
   justify-content: center;
   gap: 20px;
   flex-wrap: wrap;
-  background: var(--background-color);
-  box-shadow: 0 -2px 15px rgba(0,0,0,0.15);
-  z-index: 10;
+  padding: 20px;
+  background-color: rgba(17, 24, 39, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid #374151;
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.3);
+  z-index: 100;
 }
 
 .profile__change,
@@ -147,11 +153,9 @@
   font-size: 18px;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(228, 131, 27, 0.3);
   transition: background-color 0.3s ease, transform 0.15s ease, box-shadow 0.3s ease;
   white-space: nowrap;
   min-width: 160px;
-  max-width: 100%;
 }
 
 .profile__change {
@@ -185,8 +189,7 @@
 @media (max-width: 768px) {
   .profile {
     padding-top: 80px;
-    height: auto;
-    padding-bottom: 120px;
+    padding-bottom: 110px;
   }
 
   .profile__title {
@@ -200,22 +203,19 @@
   }
 
   .profile__input {
-    width: 100%;
     max-width: 350px;
     padding: 12px 20px;
     font-size: 15px;
   }
 
   .profile__buttons {
-    max-width: 90vw;
+    gap: 16px;
   }
 
   .profile__change,
   .profile__delete,
   .profile__apply,
   .profile__reset {
-    width: auto;
-    max-width: 340px;
     font-size: 17px;
     padding: 14px 35px;
   }
@@ -224,8 +224,7 @@
 @media (max-width: 480px) {
   .profile {
     padding-top: 60px;
-    height: auto;
-    padding-bottom: 140px;
+    padding-bottom: 270px;
   }
 
   .profile__title {
@@ -246,17 +245,18 @@
 
   .profile__buttons {
     flex-direction: column;
-    padding: 15px 10px;
+    padding: 15px;
+    gap: 15px;
   }
 
   .profile__change,
   .profile__delete,
   .profile__apply,
   .profile__reset {
-    max-width: 260px;
-    padding: 10px 25px;
-    font-size: 14px;
-    margin-left: auto;
-    margin-right: auto;
+    width: 100%;
+    max-width: 280px;
+    padding: 12px 25px;
+    font-size: 16px;
+    margin: 0 auto;
   }
 }
