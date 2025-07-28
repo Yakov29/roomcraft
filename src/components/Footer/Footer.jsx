@@ -27,7 +27,7 @@ const Footer = () => {
                     data-aos-delay="100"
                 />
                 <ul className="footer__list">
-                    <li className="footer__item" data-aos="fade-right" data-aos-delay="200">
+                    <li className="footer__item">
                         <p className="footer__text">
                             <CiMail /> Email:{" "}
                             <a className="footer__link" href="mailto:yakovderkachenko@gmail.com">
@@ -35,7 +35,7 @@ const Footer = () => {
                             </a>
                         </p>
                     </li>
-                    <li className="footer__item" data-aos="fade-right" data-aos-delay="300">
+                    <li className="footer__item">
                         <p className="footer__text">
                             <FaGithub /> GitHub:{" "}
                             <a className="footer__link" href="https://github.com/Yakov29" target="_blank" rel="noopener noreferrer">
@@ -43,7 +43,7 @@ const Footer = () => {
                             </a>
                         </p>
                     </li>
-                    <li className="footer__item" data-aos="fade-right" data-aos-delay="400">
+                    <li className="footer__item">
                         <p className="footer__text">
                             <FaInstagram /> Instagram:{" "}
                             <a className="footer__link" href="https://www.instagram.com/d.yakov29/" target="_blank" rel="noopener noreferrer">

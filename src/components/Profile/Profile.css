@@ -2,6 +2,7 @@
   text-align: center;
   height: 100vh;
   padding-top: 150px;
+  padding-bottom: 100px;
   position: relative;
   overflow: hidden;
   background-color: var(--background-color);
@@ -16,26 +17,26 @@
   width: 260%;
   height: 260%;
   background:
-    radial-gradient(circle 50px at 5% 10%, var(--accent) 99%, transparent 100%),
-    radial-gradient(circle 45px at 12% 35%, var(--primary-dark) 99%, transparent 100%),
-    radial-gradient(circle 60px at 20% 65%, var(--primary-darker) 99%, transparent 100%),
-    radial-gradient(circle 38px at 32% 20%, var(--accent) 99%, transparent 100%),
-    radial-gradient(circle 42px at 40% 50%, var(--primary-dark) 99%, transparent 100%),
-    radial-gradient(circle 30px at 52% 10%, var(--primary-darker) 99%, transparent 100%),
-    radial-gradient(circle 58px at 62% 40%, var(--accent) 99%, transparent 100%),
-    radial-gradient(circle 36px at 72% 75%, var(--primary-dark) 99%, transparent 100%),
-    radial-gradient(circle 42px at 85% 25%, var(--primary-darker) 99%, transparent 100%),
-    radial-gradient(circle 60px at 92% 60%, var(--accent) 99%, transparent 100%),
-    radial-gradient(circle 50px at 80% 10%, var(--primary-dark) 99%, transparent 100%),
-    radial-gradient(circle 40px at 25% 85%, var(--primary-darker) 99%, transparent 100%),
-    radial-gradient(circle 36px at 15% 75%, var(--accent) 99%, transparent 100%),
-    radial-gradient(circle 42px at 45% 80%, var(--primary-dark) 99%, transparent 100%),
-    radial-gradient(circle 48px at 68% 22%, var(--primary-darker) 99%, transparent 100%),
-    radial-gradient(circle 52px at 88% 45%, var(--accent) 99%, transparent 100%),
-    radial-gradient(circle 46px at 30% 10%, var(--primary-dark) 99%, transparent 100%),
-    radial-gradient(circle 55px at 60% 70%, var(--primary-darker) 99%, transparent 100%),
-    radial-gradient(circle 50px at 75% 15%, var(--accent) 99%, transparent 100%),
-    radial-gradient(circle 42px at 10% 55%, var(--primary-dark) 99%, transparent 100%);
+          radial-gradient(circle 50px at 5% 10%, var(--accent) 99%, transparent 100%),
+          radial-gradient(circle 45px at 12% 35%, var(--primary-dark) 99%, transparent 100%),
+          radial-gradient(circle 60px at 20% 65%, var(--primary-darker) 99%, transparent 100%),
+          radial-gradient(circle 38px at 32% 20%, var(--accent) 99%, transparent 100%),
+          radial-gradient(circle 42px at 40% 50%, var(--primary-dark) 99%, transparent 100%),
+          radial-gradient(circle 30px at 52% 10%, var(--primary-darker) 99%, transparent 100%),
+          radial-gradient(circle 58px at 62% 40%, var(--accent) 99%, transparent 100%),
+          radial-gradient(circle 36px at 72% 75%, var(--primary-dark) 99%, transparent 100%),
+          radial-gradient(circle 42px at 85% 25%, var(--primary-darker) 99%, transparent 100%),
+          radial-gradient(circle 60px at 92% 60%, var(--accent) 99%, transparent 100%),
+          radial-gradient(circle 50px at 80% 10%, var(--primary-dark) 99%, transparent 100%),
+          radial-gradient(circle 40px at 25% 85%, var(--primary-darker) 99%, transparent 100%),
+          radial-gradient(circle 36px at 15% 75%, var(--accent) 99%, transparent 100%),
+          radial-gradient(circle 42px at 45% 80%, var(--primary-dark) 99%, transparent 100%),
+          radial-gradient(circle 48px at 68% 22%, var(--primary-darker) 99%, transparent 100%),
+          radial-gradient(circle 52px at 88% 45%, var(--accent) 99%, transparent 100%),
+          radial-gradient(circle 46px at 30% 10%, var(--primary-dark) 99%, transparent 100%),
+          radial-gradient(circle 55px at 60% 70%, var(--primary-darker) 99%, transparent 100%),
+          radial-gradient(circle 50px at 75% 15%, var(--accent) 99%, transparent 100%),
+          radial-gradient(circle 42px at 10% 55%, var(--primary-dark) 99%, transparent 100%);
   animation: moveCircles 25s linear infinite;
   z-index: 0;
   opacity: 0.7;
@@ -121,10 +122,18 @@
 }
 
 .profile__buttons {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 12px 20px;
   display: flex;
   justify-content: center;
   gap: 20px;
   flex-wrap: wrap;
+  background: var(--background-color);
+  box-shadow: 0 -2px 15px rgba(0,0,0,0.15);
+  z-index: 10;
 }
 
 .profile__change,
@@ -177,6 +186,7 @@
   .profile {
     padding-top: 80px;
     height: auto;
+    padding-bottom: 120px;
   }
 
   .profile__title {
@@ -197,20 +207,17 @@
   }
 
   .profile__buttons {
-    flex-direction: column;
-    gap: 16px;
+    max-width: 90vw;
   }
 
   .profile__change,
   .profile__delete,
   .profile__apply,
   .profile__reset {
-    width: 100%;
+    width: auto;
     max-width: 340px;
     font-size: 17px;
     padding: 14px 35px;
-     margin-left: auto;
-    margin-right: auto;
   }
 }
 
@@ -218,6 +225,7 @@
   .profile {
     padding-top: 60px;
     height: auto;
+    padding-bottom: 140px;
   }
 
   .profile__title {
@@ -236,7 +244,10 @@
     font-size: 14px;
   }
 
- 
+  .profile__buttons {
+    flex-direction: column;
+    padding: 15px 10px;
+  }
 
   .profile__change,
   .profile__delete,
@@ -247,6 +258,5 @@
     font-size: 14px;
     margin-left: auto;
     margin-right: auto;
-
   }
 }

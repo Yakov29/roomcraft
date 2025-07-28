@@ -755,7 +755,7 @@ const Tutorial = ({ show, onClose }) => {
             left: 0,
             width: '100vw',
             height: '100vh',
-            background: 'rgba(0,0,0,0.7)',
+            backgroundColor: '#121924',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
