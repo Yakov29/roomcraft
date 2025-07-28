@@ -78,8 +78,11 @@ const Hero = () => {
     const handleButtonClick = () => {
         if (hasUser && userId) {
             navigate(`/user/${userId}/rooms`);
+        } else {
+            navigate("/register");
         }
     };
+
 
     return (
         <section className="hero" data-aos="fade-up">

@@ -9,6 +9,7 @@ const RoomsList = () => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   const [rooms, setRooms] = useState([]);
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
 
   useEffect(() => {
     AOS.init({ duration: 800, once: true });
@@ -21,6 +22,15 @@ const RoomsList = () => {
       setUserData(parsedUser);
       setRooms(parsedUser.rooms || []);
     }
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileOrTablet(window.innerWidth <= 1024);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const handleDelete = (id) => {
@@ -82,74 +92,76 @@ const RoomsList = () => {
   };
 
   return (
-    <section className="rooms-list">
-      <Container>
-        <h2 className="rooms__title" data-aos="fade-down">Кімнати користувача</h2>
-        {rooms.length === 0 ? (
-          <p className="rooms__none" data-aos="fade-up">У вас ще немає кімнат. Створіть нову!</p>
-        ) : (
-          <ul className="rooms__list">
-            {rooms.map((room, index) => (
-              <li
-                key={room.id}
-                className="rooms__item"
-                data-aos="fade-up"
-                data-aos-delay={index * 100}
-              >
-                <div onClick={() => handleEdit(room.id)} style={{ cursor: "pointer" }}>
-                  <h4 className="rooms__name">{room.name}</h4>
-                  <p className="rooms__date">Створено: {room.createdAt}</p>
-                </div>
-                <div className="rooms__buttons">
-                  <button
-                    className="rooms__action-button rooms__action-button--edit"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEdit(room.id);
-                    }}
-                  >
-                    Редагувати
-                  </button>
-                  <button
-                    className="rooms__action-button rooms__action-button--delete"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(room.id);
-                    }}
-                  >
-                    Видалити
-                  </button>
-                  <button
-                    className="rooms__action-button rooms__action-button--download"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDownload(room);
-                    }}
-                  >
-                    Експортувати
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="rooms__actions" data-aos="fade-up" data-aos-delay={rooms.length * 100}>
-          <button className="rooms__button" onClick={() => navigate("/create")}>
-            Створити нову
-          </button>
-          <label htmlFor="upload-room-file" className="rooms__button rooms__button--upload">
-            Імпортувати кімнату
-            <input
-              id="upload-room-file"
-              type="file"
-              accept=".json"
-              onChange={handleUpload}
-              style={{ display: "none" }}
-            />
-          </label>
-        </div>
-      </Container>
-    </section>
+      <section className="rooms-list">
+        <Container>
+          <h2 className="rooms__title" data-aos="fade-down">Кімнати користувача</h2>
+          {rooms.length === 0 ? (
+              <p className="rooms__none" data-aos="fade-up">У вас ще немає кімнат. Створіть нову!</p>
+          ) : (
+              <ul className="rooms__list">
+                {rooms.map((room, index) => (
+                    <li
+                        key={room.id}
+                        className="rooms__item"
+                        data-aos="fade-up"
+                        data-aos-delay={index * 100}
+                    >
+                      <div style={{ cursor: "pointer" }}>
+                        <h4 className="rooms__name">{room.name}</h4>
+                        <p className="rooms__date">Створено: {room.createdAt}</p>
+                      </div>
+                      <div className="rooms__buttons">
+                        {!isMobileOrTablet && (
+                            <button
+                                className="rooms__action-button rooms__action-button--edit"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(room.id);
+                                }}
+                            >
+                              Редагувати
+                            </button>
+                        )}
+                        <button
+                            className="rooms__action-button rooms__action-button--delete"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(room.id);
+                            }}
+                        >
+                          Видалити
+                        </button>
+                        <button
+                            className="rooms__action-button rooms__action-button--download"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(room);
+                            }}
+                        >
+                          Експортувати
+                        </button>
+                      </div>
+                    </li>
+                ))}
+              </ul>
+          )}
+          <div className="rooms__actions" data-aos="fade-up" data-aos-delay={rooms.length * 100}>
+            <button className="rooms__button" onClick={() => navigate("/create")}>
+              Створити нову
+            </button>
+            <label htmlFor="upload-room-file" className="rooms__button rooms__button--upload">
+              Імпортувати кімнату
+              <input
+                  id="upload-room-file"
+                  type="file"
+                  accept=".json"
+                  onChange={handleUpload}
+                  style={{ display: "none" }}
+              />
+            </label>
+          </div>
+        </Container>
+      </section>
   );
 };
 
