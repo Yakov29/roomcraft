@@ -5,6 +5,266 @@ import { GridHelper, Vector3, MeshStandardMaterial, Raycaster, Plane, Euler, Qua
 import * as THREE from 'three';
 import { useParams, useNavigate } from 'react-router-dom';
 
+// CSS Variables (moved here for consistency with the example)
+const styles = {
+    root: {
+        '--background-color': '#121924',
+        '--primary-dark': '#2C3A59',
+        '--primary-darker': '#1B2438',
+        '--accent': '#2D9CDB',
+        '--text-color-light': '#E1E6F0',
+        '--text-color-muted': '#A0AEC0',
+    },
+    // Styles for the tutorial and inventory elements
+    tutorialModal: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'var(--background-color)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 2000,
+    },
+    tutorialContent: {
+        background: 'var(--primary-dark)',
+        padding: '30px',
+        borderRadius: '10px',
+        boxShadow: '0 5px 15px rgba(0,0,0,0.5)',
+        color: 'var(--text-color-light)',
+        maxWidth: '600px',
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+    },
+    tutorialTitle: {
+        color: 'var(--accent)',
+        margin: 0,
+        fontSize: '2em',
+        fontWeight: '700',
+    },
+    tutorialText: {
+        lineHeight: 1.6,
+        whiteSpace: 'pre-wrap',
+        color: 'var(--text-color-muted)',
+        fontSize: '1.1em',
+    },
+    tutorialButtonContainer: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginTop: '20px',
+    },
+    // Base button style
+    buttonBase: {
+        padding: '15px 40px',
+        color: '#FFFFFF',
+        borderRadius: '8px',
+        border: 'none',
+        cursor: 'pointer',
+        fontWeight: '600',
+        fontSize: '1.1em',
+        transition: 'background-color 0.3s ease, transform 0.2s, box-shadow 0.3s ease',
+    },
+    // Specific tutorial button styles
+    tutorialSkipButton: {
+        backgroundColor: '#DC2626',
+        boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
+    },
+    tutorialSkipButtonHover: {
+        backgroundColor: '#EF4444',
+        transform: 'translateY(-2px)',
+    },
+    tutorialNextButton: {
+        backgroundColor: 'var(--accent)',
+        boxShadow: '0 4px 12px rgba(45, 156, 219, 0.3)',
+    },
+    tutorialNextButtonHover: {
+        backgroundColor: '#3AA0FF',
+        transform: 'translateY(-2px)',
+    },
+    inventoryPanel: {
+        background: 'rgba(31, 41, 55, 0.4)', // Made more transparent
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        color: 'var(--text-color-light)',
+        padding: '15px',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '20px',
+        overflowX: 'hidden',
+        overflowY: 'auto',
+        maxHeight: '280px',
+        borderTop: '1px solid rgba(75, 85, 99, 0.5)',
+        boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.3)',
+        borderRadius: '15px 15px 0 0',
+        position: 'relative',
+        zIndex: 999,
+    },
+    inventorySection: {
+        background: 'var(--primary-darker)',
+        padding: '12px',
+        borderRadius: '10px',
+        minWidth: '150px',
+        flex: '1 1 auto',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+    },
+    inventoryTitle: {
+        margin: '0 0 10px 0',
+        color: 'var(--accent)',
+        fontSize: '1.2em',
+        fontWeight: '700',
+    },
+    inventorySubTitle: {
+        margin: '0 0 6px 0',
+        color: 'var(--text-color-muted)',
+        fontSize: '1em',
+        fontWeight: '600',
+        borderBottom: '1px solid rgba(75, 85, 99, 0.5)',
+        paddingBottom: '4px',
+    },
+    // Inventory button specific styles
+    toolButtonActive: {
+        backgroundColor: 'var(--accent)',
+        boxShadow: '0 4px 12px rgba(45, 156, 219, 0.3)',
+    },
+    toolButtonActiveHover: {
+        backgroundColor: '#3AA0FF',
+        transform: 'translateY(-2px)',
+    },
+    toolButtonInactive: {
+        background: 'rgba(75,85,99,0.7)',
+        boxShadow: 'none',
+    },
+    toolButtonInactiveHover: {
+        backgroundColor: '#5A6578',
+        transform: 'translateY(-2px)',
+    },
+    colorInput: {
+        width: '40px',
+        height: '40px',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        border: '2px solid #4B5563',
+        overflow: 'hidden',
+        background: 'transparent',
+        padding: 0,
+        boxSizing: 'content-box',
+        transition: 'border-color 0.2s ease',
+    },
+    colorSwatch: {
+        width: '40px',
+        height: '40px',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        transition: 'border 0.2s ease, transform 0.2s',
+    },
+    colorSwatchSelected: {
+        border: '3px solid #F59E0B',
+        boxShadow: '0 0 0 1px #F59E0B',
+    },
+    furnitureItem: {
+        padding: '8px 12px',
+        background: 'rgba(31, 41, 55, 0.8)',
+        color: '#FFFFFF',
+        borderRadius: '8px',
+        cursor: 'grab',
+        border: '1px solid rgba(75, 85, 99, 0.5)',
+        userSelect: 'none',
+        fontSize: '0.9em',
+        whiteSpace: 'nowrap',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.2s',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+    },
+    furnitureItemHover: {
+        backgroundColor: 'rgba(45, 156, 219, 0.3)',
+        transform: 'translateY(-2px)',
+    },
+    roomNameInput: {
+        background: '#4B5563',
+        color: 'var(--text-color-light)',
+        border: '1px solid #6B7280',
+        borderRadius: '5px',
+        padding: '8px 12px',
+        fontSize: '1em',
+        outline: 'none',
+        width: 'calc(100% - 24px)',
+    },
+    saveButton: {
+        backgroundColor: '#28A745',
+        boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
+    },
+    saveButtonHover: {
+        backgroundColor: '#34D399',
+        transform: 'translateY(-2px)',
+    },
+    clearButton: {
+        backgroundColor: '#DC2626',
+        boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
+    },
+    clearButtonHover: {
+        backgroundColor: '#EF4444',
+        transform: 'translateY(-2px)',
+    },
+    exitButton: {
+        backgroundColor: '#545454ff',
+        boxShadow: '0 4px 12px rgba(65, 65, 66, 0.3)',
+    },
+    exitButtonHover: {
+        backgroundColor: '#6B7280',
+        transform: 'translateY(-2px)',
+    }
+};
+
+// Helper component for buttons with hover effects
+const HoverButton = ({ children, style, hoverStyle, onClick }) => {
+    const [isHovered, setIsHovered] = useState(false);
+
+    const mergedStyle = {
+        ...style,
+        ...(isHovered ? hoverStyle : {}),
+    };
+
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            style={mergedStyle}
+        >
+            {children}
+        </button>
+    );
+};
+
+// Helper component for divs with hover effects (like furniture items)
+const HoverDiv = ({ children, style, hoverStyle, onMouseDown, title }) => {
+    const [isHovered, setIsHovered] = useState(false);
+
+    const mergedStyle = {
+        ...style,
+        ...(isHovered ? hoverStyle : {}),
+    };
+
+    return (
+        <div
+            onMouseDown={onMouseDown}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            style={mergedStyle}
+            title={title}
+        >
+            {children}
+        </div>
+    );
+};
+
+
 const CELL_SIZE = 1;
 const WALL_HEIGHT = 3;
 const INITIAL_GRID_SIZE = 16;
@@ -21,10 +281,10 @@ const ROTATION_SPEED_KEYBOARD_PITCH = 0.1;
 const LERP_FACTOR = 0.2;
 
 const TOOL_TYPES = {
-    wall: '🧱 Стена',
-    floor: '⬜ Пол',
-    paint: '🎨 Краска',
-    furniture: 'Мебель',
+    wall: '🧱 Стіна',
+    floor: '⬜ Підлога',
+    paint: '🎨 Фарба',
+    furniture: 'Меблі',
 };
 
 const BASE_COLORS = ['#E1E6F0', '#2C3A59', '#2D9CDB', '#FFA94D', '#228B22'];
@@ -33,40 +293,40 @@ const hoverMaterial = new MeshStandardMaterial({ color: "#ADD8E6", transparent: 
 const phantomMaterial = new MeshStandardMaterial({ color: "#2D9CDB", transparent: true, opacity: 0.5 });
 
 const FURNITURE_CATEGORIES = {
-    '🛋️ Гостиная': [
+    '🛋️ Вітальня': [
         { type: 'sofa', label: 'Диван', dimensions: { width: 1.6, depth: 0.8, height: 0.8 } },
-        { type: 'chair', label: 'Кресло', dimensions: { width: 0.6, depth: 0.6, height: 0.8 } },
-        { type: 'table', label: 'Стол', dimensions: { width: 1.0, depth: 0.8, height: 0.8 } },
+        { type: 'chair', label: 'Крісло', dimensions: { width: 0.6, depth: 0.6, height: 0.8 } },
+        { type: 'table', label: 'Стіл', dimensions: { width: 1.0, depth: 0.8, height: 0.8 } },
     ],
-    '🚪 Проёмы': [
-        { type: 'door', label: 'Дверь', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
-        { type: 'window', label: 'Окно', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
+    '🚪 Прорізи': [
+        { type: 'door', label: 'Двері', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
+        { type: 'window', label: 'Вікно', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
     ],
     '🧑‍🍳 Кухня': [
-        { type: 'kitchenTable', label: 'Кухонный стол', dimensions: { width: 1.2, depth: 0.7, height: 0.8 } },
-        { type: 'kitchenCabinet', label: 'Кухонный шкаф', dimensions: { width: 1.0, depth: 0.5, height: 1.0 } },
+        { type: 'kitchenTable', label: 'Кухонний стіл', dimensions: { width: 1.2, depth: 0.7, height: 0.8 } },
+        { type: 'kitchenCabinet', label: 'Кухонна шафа', dimensions: { width: 1.0, depth: 0.5, height: 1.0 } },
     ],
     '🌳 Сад': [
-        { type: 'outdoorChair', label: 'Уличный стул', dimensions: { width: 0.6, depth: 0.6, height: 0.5 } },
-        { type: 'outdoorTable', label: 'Уличный стол', dimensions: { width: 1.0, depth: 1.0, height: 0.75 } },
+        { type: 'outdoorChair', label: 'Вуличний стілець', dimensions: { width: 0.6, depth: 0.6, height: 0.5 } },
+        { type: 'outdoorTable', label: 'Вуличний стіл', dimensions: { width: 1.0, depth: 1.0, height: 0.75 } },
     ],
     '🛏️ Спальня': [
-        { type: 'bed', label: 'Кровать', dimensions: { width: 1.9, depth: 1.3, height: 0.5 } },
+        { type: 'bed', label: 'Ліжко', dimensions: { width: 1.9, depth: 1.3, height: 0.5 } },
         { type: 'lamp', label: 'Лампа', dimensions: { width: 0.3, depth: 0.3, height: 1.1 } },
-        { type: 'cabinet', label: 'Шкаф', dimensions: { width: 1.0, depth: 0.5, height: 2.0 } },
+        { type: 'cabinet', label: 'Шафа', dimensions: { width: 1.0, depth: 0.5, height: 2.0 } },
     ],
-    '💻 Электроника': [
-        { type: 'tv', label: 'Телевизор', dimensions: { width: 1.6, depth: 0.6, height: 1.0 } },
-        { type: 'console', label: 'Игровая приставка', dimensions: { width: 0.4, depth: 0.6, height: 0.1 } },
-        { type: 'computerSetup', label: 'Компьютерный сетап', dimensions: { width: 1.6, depth: 0.7, height: 1.0 } },
+    '💻 Електроніка': [
+        { type: 'tv', label: 'Телевізор', dimensions: { width: 1.6, depth: 0.6, height: 1.0 } },
+        { type: 'console', label: 'Ігрова приставка', dimensions: { width: 0.4, depth: 0.1, height: 0.6 } },
+        { type: 'computerSetup', label: 'Комп\'ютерний сетап', dimensions: { width: 1.6, depth: 0.7, height: 1.0 } },
     ],
-    '💡 Освещение': [
-        { type: 'ceilingLamp', label: 'Потолочная лампа', dimensions: { width: 0.6, depth: 0.6, height: 0.6 } },
-        { type: 'rgbStrip', label: 'RGB лента', dimensions: { width: 1.0, depth: 0.05, height: 0.02 } },
+    '💡 Освітлення': [
+        { type: 'ceilingLamp', label: 'Стельова лампа', dimensions: { width: 0.6, depth: 0.6, height: 0.6 } },
+        { type: 'rgbStrip', label: 'RGB стрічка', dimensions: { width: 1.0, depth: 0.05, height: 0.02 } },
     ],
-    '🌱 Растения': [
-        { type: 'pottedPlant', label: 'Горшечное растение', dimensions: { width: 0.4, depth: 0.4, height: 0.8 } },
-        { type: 'tallPlant', label: 'Высокое растение', dimensions: { width: 0.5, depth: 0.5, height: 1.5 } },
+    '🌱 Рослини': [
+        { type: 'pottedPlant', label: 'Горщикова рослина', dimensions: { width: 0.4, depth: 0.4, height: 0.8 } },
+        { type: 'tallPlant', label: 'Висока рослина', dimensions: { width: 0.5, depth: 0.5, height: 1.5 } },
     ]
 };
 
@@ -150,52 +410,48 @@ const Modal = ({ show, title, message, onClose, onConfirm, isConfirm = false }) 
             zIndex: 2000,
         }}>
             <div style={{
-                background: '#374151',
-                padding: '30px',
-                borderRadius: '10px',
-                boxShadow: '0 5px 15px rgba(0,0,0,0.5)',
-                color: '#E5E7EB',
+                background: styles.tutorialContent.background,
+                padding: styles.tutorialContent.padding,
+                borderRadius: styles.tutorialContent.borderRadius,
+                boxShadow: styles.tutorialContent.boxShadow,
+                color: styles.tutorialContent.color,
                 maxWidth: '400px',
                 textAlign: 'center',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '20px'
             }}>
-                <h2 style={{ color: '#3B82F6', margin: 0 }}>{title}</h2>
-                <p style={{ lineHeight: 1.6 }}>{message}</p>
+                <h2 style={{ color: styles.tutorialTitle.color, margin: 0 }}>{title}</h2>
+                <p style={{ lineHeight: 1.6, color: styles.tutorialText.color }}>{message}</p>
                 <div style={{ display: 'flex', justifyContent: isConfirm ? 'space-between' : 'center', marginTop: '20px' }}>
                     {isConfirm && (
-                        <button
+                        <HoverButton
                             onClick={onClose}
                             style={{
+                                ...styles.buttonBase,
+                                ...styles.tutorialSkipButton,
                                 padding: '10px 20px',
-                                background: '#DC2626',
-                                color: '#E5E7EB',
-                                border: 'none',
-                                borderRadius: '5px',
-                                cursor: 'pointer',
                                 fontSize: '16px',
-                                opacity: 0.8,
+                                opacity: 0.9,
                             }}
+                            hoverStyle={styles.tutorialSkipButtonHover}
                         >
-                            Отмена
-                        </button>
+                            Скасувати
+                        </HoverButton>
                     )}
-                    <button
+                    <HoverButton
                         onClick={onConfirm || onClose}
                         style={{
+                            ...styles.buttonBase,
+                            ...styles.tutorialNextButton,
                             padding: '10px 20px',
-                            background: '#3B82F6',
-                            color: '#E5E7EB',
-                            border: 'none',
-                            borderRadius: '5px',
-                            cursor: 'pointer',
                             fontSize: '16px',
                             marginLeft: isConfirm ? 'auto' : '0',
                         }}
+                        hoverStyle={styles.tutorialNextButtonHover}
                     >
-                        {isConfirm ? 'Подтвердить' : 'ОК'}
-                    </button>
+                        {isConfirm ? 'Підтвердити' : 'ОК'}
+                    </HoverButton>
                 </div>
             </div>
         </div>
@@ -711,56 +967,56 @@ const Tutorial = ({ show, onClose }) => {
 
     const steps = [
         {
-            title: 'Добро пожаловать в Room Designer!',
-            text: 'Давайте быстро освоим основы. Нажмите "Далее", чтобы начать.'
+            title: 'Ласкаво просимо до RoomCraft редактор!',
+            text: 'Давайте швидко освоїмо основи. Натисніть "Далі", щоб почати.'
         },
         {
-            title: 'Инструменты и Цвета',
-            text: `В нижней части экрана вы видите панель инструментов (🧱, ⬜, 🎨) и цветов. Выберите инструмент и цвет, чтобы начать строительство.`
+            title: 'Інструменти та Кольори',
+            text: `У нижній частині екрана ви бачите панель інструментів (🧱, ⬜, 🎨) та кольорів. Виберіть інструмент і колір, щоб почати будівництво.`
         },
         {
-            title: 'Создание Пола',
-            text: `Выберите инструмент "⬜ Пол". Щелкните **ЛЕВОЙ** кнопкой мыши на сетке в 3D-окне, чтобы начать перетаскивание плитки пола. Отпустите, чтобы разместить.`
+            title: 'Створення Підлоги',
+            text: `Виберіть інструмент "⬜ Підлога". Клацніть **ЛІВОЮ** кнопкою миші на сітці у 3D-вікні, щоб почати перетягування плитки підлоги. Відпустіть, щоб розмістити.`
         },
         {
-            title: 'Размещение Стен',
-            text: `Выберите инструмент "🧱 Стена". Щелкните **ЛЕВОЙ** кнопкой мыши на существующей плитке пола, чтобы начать перетаскивание стены. Отпустите, чтобы разместить.`
+            title: 'Розміщення Стін',
+            text: `Виберіть інструмент "🧱 Стіна". Клацніть **ЛІВОЮ** кнопкою миші на існуючій плитці підлоги, щоб почати перетягування стіни. Відпустіть, щоб розмістити.`
         },
         {
-            title: 'Размещение Мебели (Перетаскивание)',
-            text: 'Щелкните **ЛЕВОЙ** кнопкой мыши на иконке предмета в инвентаре (снизу) и, не отпуская, перетащите его на нужную плитку пола. Отпустите кнопку мыши, чтобы разместить предмет.'
+            title: 'Розміщення Меблів (Перетягування)',
+            text: 'Клацніть **ЛІВОЮ** кнопкою миші на іконці предмета в інвентарі (знизу) і, не відпускаючи, перетягніть його на потрібну плитку підлоги. Відпустіть кнопку миші, щоб розмістити предмет.'
         },
         {
-            title: 'Окрашивание Объектов (Перетаскивание)',
-            text: `Выберите инструмент "🎨 Краска" и новый цвет. Щелкните **ЛЕВОЙ** кнопкой мыши на плитке пола или на мебели и, не отпуская, перетаскивайте курсор, чтобы покрасить их.`
+            title: 'Фарбування Об\'єктів (Перетягування)',
+            text: `Виберіть інструмент "🎨 Фарба" та новий колір. Клацніть **ЛІВОЮ** кнопкою миші на плитці підлоги або на меблях і, не відпускаючи, перетягуйте курсор, щоб пофарбувати їх.`
         },
         {
-            title: 'Удаление Объектов (Правый Клик)',
-            text: 'Вы можете удалить любой объект (пол, стену, мебель), щелкнув по нему **ПРАВОЙ** кнопкой мыши.'
+            title: 'Видалення Об\'єктів (Правий Клік)',
+            text: 'Ви можете видалити будь-який об\'єкт (підлогу, стіну, меблі), клацнувши по ньому **ПРАВОЮ** кнопкою миші.'
         },
         {
-            title: 'Поворот Объектов',
-            text: 'Чтобы **повернуть** объект (фантомный во время перетаскивания или уже размещенный), наведите на него курсор и нажмите **"R"** на клавиатуре.'
+            title: 'Обертання Об\'єктів',
+            text: 'Щоб **обернути** об\'єкт (фантомний під час перетягування або вже розміщений), наведіть на нього курсор і натисніть **"R"** на клавіатурі.'
         },
         {
-            title: 'Привязка к Стене (Новая функция!)',
-            text: 'Чтобы **привязать** мебель к краю блока (к стене), наведите на объект и нажмите **"T"**. Объект переместится к ближайшей стене вместо центра блока.'
+            title: 'Прив\'язка до Стіни (Нова функція!)',
+            text: 'Щоб **прив\'язати** меблі до краю блоку (до стіни), наведіть на об\'єкт і натисніть **"T"**. Об\'єкт переміститься до найближчої стіни замість центру блоку.'
         },
         {
-            title: 'Сохранить Проект',
-            text: 'Используйте кнопку "Сохранить" в нижней панели, чтобы сохранить текущее состояние вашей комнаты. Это позволит вам вернуться к нему позже.'
+            title: 'Зберегти Проект',
+            text: 'Використовуйте кнопку "Зберегти" у нижній панелі, щоб зберегти поточний стан вашої кімнати. Це дозволить вам повернутися до нього пізніше.'
         },
         {
-            title: 'Сбросить Проект',
-            text: 'Если вы хотите начать все заново, воспользуйтесь кнопкой "Очистить все" в нижней панели.'
+            title: 'Скинути Проект',
+            text: 'Якщо ви хочете почати все заново, скористайтеся кнопкою "Очистити все" у нижній панелі.'
         },
         {
-            title: 'Управление Камерой (Клавиатура)',
-            text: 'Используйте клавиши **WASD** для перемeщения вперед/назад/вбок. \nИспользуйте **E** для движения вверх и **Q** для движения вниз.\nИспользуйте **стрелки влево/вправо** для поворота камеры.\nИспользуйте **стрелки вверх/вниз** для наклона камеры вверх/вниз.'
+            title: 'Керування Камерою (Клавіатура)',
+            text: 'Використовуйте клавіші **WASD** для переміщення вперед/назад/вбік. \nВикористовуйте **E** для руху вгору та **Q** для руху вниз.\nВикористовуйте **стрілки вліво/вправо** для повороту камери.\nВикористовуйте **стрілки вгору/вниз** для нахилу камери вгору/вниз.'
         },
         {
             title: 'Готово!',
-            text: 'Вы освоили основы! Наслаждайтесь созданием своего дизайна!'
+            text: 'Ви освоїли основи! Насолоджуйтесь створенням свого дизайну!'
         }
     ];
 
@@ -783,67 +1039,33 @@ const Tutorial = ({ show, onClose }) => {
     };
 
     return (
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: '#121924',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 2000,
-        }}>
-            <div style={{
-                background: '#374151',
-                padding: '30px',
-                borderRadius: '10px',
-                boxShadow: '0 5px 15px rgba(0,0,0,0.5)',
-                color: '#E5E7EB',
-                maxWidth: '600px',
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '20px'
-            }}>
-                <h2 style={{ color: '#3B82F6', margin: 0 }}>{steps[step].title}</h2>
-                <p style={{ lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{steps[step].text}</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+        <div style={styles.tutorialModal}>
+            <div style={styles.tutorialContent}>
+                <h2 style={styles.tutorialTitle}>{steps[step].title}</h2>
+                <p style={styles.tutorialText}>{steps[step].text}</p>
+                <div style={styles.tutorialButtonContainer}>
                     {step < steps.length - 1 ? (
-                        <button
+                        <HoverButton
                             onClick={handleSkip}
-                            style={{
-                                padding: '10px 20px',
-                                background: '#DC2626',
-                                color: '#E5E7EB',
-                                border: 'none',
-                                borderRadius: '5px',
-                                cursor: 'pointer',
-                                fontSize: '16px',
-                                opacity: 0.8,
-                            }}
+                            style={{ ...styles.buttonBase, ...styles.tutorialSkipButton }}
+                            hoverStyle={styles.tutorialSkipButtonHover}
                         >
-                            Пропустить
-                        </button>
+                            Пропустити
+                        </HoverButton>
                     ) : (
                         <div />
                     )}
-                    <button
+                    <HoverButton
                         onClick={handleNext}
                         style={{
-                            padding: '10px 20px',
-                            background: '#3B82F6',
-                            color: '#E5E7EB',
-                            border: 'none',
-                            borderRadius: '5px',
-                            cursor: 'pointer',
-                            fontSize: '16px',
+                            ...styles.buttonBase,
+                            ...styles.tutorialNextButton,
                             marginLeft: step < steps.length - 1 ? 'auto' : '0',
                         }}
+                        hoverStyle={styles.tutorialNextButtonHover}
                     >
-                        {step < steps.length - 1 ? 'Далее' : 'Начать'}
-                    </button>
+                        {step < steps.length - 1 ? 'Далі' : 'Почати'}
+                    </HoverButton>
                 </div>
             </div>
         </div>
@@ -904,8 +1126,8 @@ export default function Edit() {
     useEffect(() => {
         if (!isWebGLSupported()) {
             setModalContent({
-                title: 'Неподдерживаемый браузер/устройство',
-                message: 'Ваш браузер или устройство не поддерживает WebGL, необходимый для работы этого приложения. Пожалуйста, попробуйте другой браузер или устройство.',
+                title: 'Браузер/пристрій не підтримується',
+                message: 'Ваш браузер або пристрій не підтримує WebGL, необхідний для роботи цього додатка. Будь ласка, спробуйте інший браузер або пристрій.',
                 onConfirm: () => navigate('/'),
                 isConfirm: false
             });
@@ -919,7 +1141,7 @@ export default function Edit() {
     }, [navigate]);
 
     const resetAllState = useCallback(() => {
-        console.log('Сброс всех состояний...');
+        console.log('Скидання всіх станів...');
         setWalls({});
         setFurniture({});
         setFloorTiles({});
@@ -1053,14 +1275,14 @@ export default function Edit() {
 
     const deleteObject = useCallback((x, z) => {
         const key = getKey(x, z);
-        console.log(`Попытка удалить объект по адресу ${key}`);
+        console.log(`Спроба видалити об'єкт за адресою ${key}`);
 
         if (furniture[key]) {
             const removedFurnitureType = furniture[key].type;
             setFurniture((prev) => {
                 const copy = { ...prev };
                 delete copy[key];
-                console.log(`Мебель удалена по адресу ${key}. Новое состояние мебели:`, copy);
+                console.log(`Меблі видалено за адресою ${key}. Новий стан меблів:`, copy);
                 return copy;
             });
 
@@ -1069,7 +1291,7 @@ export default function Edit() {
                     const copy = { ...prev };
                     if (copy[key] && copy[key].hasOpening) {
                         delete copy[key];
-                        console.log(`Удалена связанная стена с проемом по адресу ${key}. Новое состояние стен:`, copy);
+                        console.log(`Видалено пов'язану стіну з отвором за адресою ${key}. Новий стан стін:`, copy);
                     }
                     return copy;
                 });
@@ -1078,14 +1300,14 @@ export default function Edit() {
             setWalls((prev) => {
                 const copy = { ...prev };
                 delete copy[key];
-                console.log(`Стена удалена по адресу ${key}. Новое состояние стен:`, copy);
+                console.log(`Стіну видалено за адресою ${key}. Новий стан стін:`, copy);
                 return copy;
             });
         } else if (floorTiles[key]) {
             setFloorTiles((prev) => {
                 const copy = { ...prev };
                 delete copy[key];
-                console.log(`Плитка пола удалена по адресу ${key}. Новое состояние пола:`, copy);
+                console.log(`Плитку підлоги видалено за адресою ${key}. Новий стан підлоги:`, copy);
                 return copy;
             });
         }
@@ -1374,7 +1596,7 @@ export default function Edit() {
                             }
 
                             if (existingFurniture && existingFurniture.type !== 'door' && existingFurniture.type !== 'window') {
-                                console.warn(`Невозможно разместить мебель, другая мебель существует по адресу ${key}`);
+                                console.warn(`Неможливо розмістити меблі, інші меблі існують за адресою ${key}`);
                             } else {
                                 const newFurniture = {
                                     type: draggedSubType,
@@ -1591,10 +1813,10 @@ export default function Edit() {
 
     const saveRoomState = useCallback(() => {
         if (isNaN(roomId)) {
-            console.error("Ошибка сохранения: Недействительный ID комнаты. Невозможно сохранить.");
+            console.error("Помилка збереження: Недійсний ID кімнати. Неможливо зберегти.");
             setModalContent({
-                title: 'Ошибка сохранения',
-                message: 'Недействительный идентификатор комнаты. Сохранение невозможно.',
+                title: 'Помилка збереження',
+                message: 'Недійсний ідентифікатор кімнати. Збереження неможливе.',
                 onConfirm: () => setShowModal(false),
                 isConfirm: false
             });
@@ -1610,16 +1832,16 @@ export default function Edit() {
                 try {
                     currentUser = JSON.parse(userJson);
                 } catch (e) {
-                    console.error("Ошибка парсинга пользователя из localStorage при сохранении, сбрасываем данные пользователя:", e);
+                    console.error("Помилка парсингу користувача з localStorage під час збереження, скидаємо дані користувача:", e);
                     currentUser = null;
                 }
             }
 
             if (!currentUser || !Array.isArray(currentUser.rooms)) {
-                console.error("Недействительные или отсутствующие данные пользователя в localStorage. Сохранение невозможно.");
+                console.error("Недійсні або відсутні дані користувача в localStorage. Збереження неможливе.");
                 setModalContent({
-                    title: 'Ошибка сохранения',
-                    message: 'Нет данных пользователя для сохранения комнаты. Войдите или зарегистрируйтесь.',
+                    title: 'Помилка збереження',
+                    message: 'Немає даних користувача для збереження кімнати. Увійдіть або зареєструйтесь.',
                     onConfirm: () => setShowModal(false),
                     isConfirm: false
                 });
@@ -1643,29 +1865,29 @@ export default function Edit() {
                     cameraQuaternion: targetCameraQuaternion.current.toArray(),
                 };
                 localStorage.setItem('user', JSON.stringify(currentUser));
-                console.log('Состояние комнаты успешно сохранено для ID:', roomId, currentUser.rooms[roomIndex]);
+                console.log('Стан кімнати успішно збережено для ID:', roomId, currentUser.rooms[roomIndex]);
                 setModalContent({
-                    title: 'Сохранено',
-                    message: `Состояние комнаты "${roomName}" успешно сохранено!`,
+                    title: 'Збережено',
+                    message: `Стан кімнати "${roomName}" успішно збережено!`,
                     onConfirm: () => { setShowModal(false); navigate('/'); },
                     isConfirm: false
                 });
                 setShowModal(true);
             } else {
-                console.warn(`Комната с ID ${roomId} не найдена в списке комнат пользователя. Сохранение не произошло.`);
+                console.warn(`Кімнату з ID ${roomId} не знайдено у списку кімнат користувача. Збереження не відбулося.`);
                 setModalContent({
-                    title: 'Ошибка сохранения',
-                    message: 'Комната с таким ID не найдена для обновления. Убедитесь, что она существует.',
+                    title: 'Помилка збереження',
+                    message: 'Кімнату з таким ID не знайдено для оновлення. Переконайтеся, що вона існує.',
                     onConfirm: () => setShowModal(false),
                     isConfirm: false
                 });
                 setShowModal(true);
             }
         } catch (error) {
-            console.error("Ошибка сохранения состояния комнаты:", error);
+            console.error("Помилка збереження стану кімнати:", error);
             setModalContent({
-                title: 'Ошибка сохранения',
-                message: 'Ошибка при сохранении состояния комнаты. Проверьте консоль для деталей.',
+                title: 'Помилка збереження',
+                message: 'Помилка під час збереження стану кімнати. Перевірте консоль для деталей.',
                 onConfirm: () => setShowModal(false),
                 isConfirm: false
             });
@@ -1676,10 +1898,10 @@ export default function Edit() {
     useEffect(() => {
         const loadRoomState = () => {
             if (isNaN(roomId)) {
-                console.error("Ошибка загрузки: Недействительный ID комнаты. Перенаправление на главную страницу.");
+                console.error("Помилка завантаження: Недійсний ID кімнати. Перенаправлення на головну сторінку.");
                 setModalContent({
-                    title: 'Ошибка загрузки',
-                    message: 'Неверный идентификатор комнаты. Перенаправление на главную страницу.',
+                    title: 'Помилка завантаження',
+                    message: 'Недійсний ідентифікатор кімнати. Перенаправлення на головну сторінку.',
                     onConfirm: () => navigate('/'),
                     isConfirm: false
                 });
@@ -1694,14 +1916,15 @@ export default function Edit() {
                 if (userJson) {
                     try {
                         currentUser = JSON.parse(userJson);
+                        // console.log("Parsed user data:", currentUser);
                     } catch (e) {
-                        console.error("Ошибка парсинга пользователя из localStorage при загрузке, сбрасываем данные пользователя:", e);
+                        console.error("Помилка парсингу користувача з localStorage під час завантаження, скидаємо дані користувача:", e);
                         currentUser = null;
                     }
                 }
 
                 if (!currentUser || !Array.isArray(currentUser.rooms)) {
-                    console.warn("Недействительные или отсутствующие данные пользователя в localStorage. Сброс состояния.");
+                    console.warn("Недійсні або відсутні дані користувача в localStorage. Скидання стану.");
                     resetAllState();
                     return;
                 }
@@ -1709,8 +1932,8 @@ export default function Edit() {
                 const roomToLoad = currentUser.rooms.find(room => room.id === roomId);
 
                 if (roomToLoad) {
-                    console.log('Загрузка состояния комнаты для ID:', roomId, roomToLoad);
-                    setRoomName(roomToLoad.name || `Комната ${roomId}`);
+                    console.log('Завантаження стану кімнати для ID:', roomId, roomToLoad);
+                    setRoomName(roomToLoad.name || `Кімната ${roomId}`);
                     setGridSize(roomToLoad.gridSize || INITIAL_GRID_SIZE);
                     setWalls(roomToLoad.walls || {});
                     setFurniture(roomToLoad.furniture || {});
@@ -1728,10 +1951,10 @@ export default function Edit() {
                         targetCameraQuaternion.current.copy(tempCamera.quaternion);
                     }
                 } else {
-                    console.warn(`Комната с ID ${roomId} не найдена в списке комнат пользователя. Инициализация нового состояния комнаты.`);
+                    console.warn(`Кімнату з ID ${roomId} не знайдено у списку кімнат користувача. Ініціалізація нового стану кімнати.`);
                     setModalContent({
-                        title: 'Комната не найдена',
-                        message: 'Комната не найдена. Был инициализирован новый проект.',
+                        title: 'Кімнату не знайдено',
+                        message: 'Кімнату не знайдено. Був ініційований новий проект.',
                         onConfirm: () => setShowModal(false),
                         isConfirm: false
                     });
@@ -1739,10 +1962,10 @@ export default function Edit() {
                     resetAllState();
                 }
             } catch (error) {
-                console.error("Ошибка загрузки состояния комнаты:", error);
+                console.error("Помилка завантаження стану кімнати:", error);
                 setModalContent({
-                    title: 'Ошибка загрузки',
-                    message: 'Ошибка при загрузке состояния комнаты. Проверьте консоль для деталей.',
+                    title: 'Помилка завантаження',
+                    message: 'Помилка під час завантаження стану кімнати. Перевірте консоль для деталей.',
                     onConfirm: () => setShowModal(false),
                     isConfirm: false
                 });
@@ -1761,8 +1984,8 @@ export default function Edit() {
 
     const deleteRoom = useCallback(() => {
         setModalContent({
-            title: 'Удалить комнату',
-            message: `Вы уверены, что хотите удалить комнату "${roomName}"? Это действие нельзя отменить.`,
+            title: 'Видалити кімнату',
+            message: `Ви впевнені, що хочете видалити кімнату "${roomName}"? Цю дію не можна скасувати.`,
             onConfirm: () => {
                 try {
                     const userJson = localStorage.getItem('user');
@@ -1772,10 +1995,10 @@ export default function Edit() {
                         try {
                             currentUser = JSON.parse(userJson);
                         } catch (e) {
-                            console.error("Ошибка парсинга пользователя из localStorage при удалении комнаты:", e);
+                            console.error("Помилка парсингу користувача з localStorage під час видалення кімнати:", e);
                             setModalContent({
-                                title: 'Ошибка',
-                                message: 'Данные пользователя повреждены. Удаление невозможно.',
+                                title: 'Помилка',
+                                message: 'Дані користувача пошкоджені. Видалення неможливе.',
                                 onConfirm: () => setShowModal(false),
                                 isConfirm: false
                             });
@@ -1785,10 +2008,10 @@ export default function Edit() {
                     }
 
                     if (!currentUser || !Array.isArray(currentUser.rooms)) {
-                        console.error("Недействительные или отсутствующие данные пользователя в localStorage. Удаление невозможно.");
+                        console.error("Недійсні або відсутні дані користувача в localStorage. Видалення неможливе.");
                         setModalContent({
-                            title: 'Ошибка',
-                            message: 'Нет данных пользователя. Удаление невозможно.',
+                            title: 'Помилка',
+                            message: 'Немає даних користувача. Видалення неможливе.',
                             onConfirm: () => setShowModal(false),
                             isConfirm: false
                         });
@@ -1803,28 +2026,28 @@ export default function Edit() {
                         currentUser.rooms = updatedRooms;
                         localStorage.setItem('user', JSON.stringify(currentUser));
                         setModalContent({
-                            title: 'Комната удалена',
-                            message: `Комната "${roomName}" успешно удалена.`,
+                            title: 'Кімнату видалено',
+                            message: `Кімнату "${roomName}" успішно видалено.`,
                             onConfirm: () => { setShowModal(false); navigate('/'); },
                             isConfirm: false
                         });
                         setShowModal(true);
-                        console.log(`Комната с ID ${roomId} успешно удалена.`);
+                        console.log(`Кімнату з ID ${roomId} успішно видалено.`);
                     } else {
                         setModalContent({
-                            title: 'Ошибка удаления',
-                            message: 'Комната с таким ID не найдена.',
+                            title: 'Помилка видалення',
+                            message: 'Кімнату з таким ID не знайдено.',
                             onConfirm: () => setShowModal(false),
                             isConfirm: false
                         });
                         setShowModal(true);
-                        console.warn(`Комната с ID ${roomId} не найдена для удаления.`);
+                        console.warn(`Кімнату з ID ${roomId} не знайдено для видалення.`);
                     }
                 } catch (error) {
-                    console.error("Ошибка удаления комнаты:", error);
+                    console.error("Помилка видалення кімнати:", error);
                     setModalContent({
-                        title: 'Ошибка удаления',
-                        message: 'Ошибка при удалении комнаты. Проверьте консоль для деталей.',
+                        title: 'Помилка видалення',
+                        message: 'Помилка під час видалення кімнати. Перевірте консоль для деталей.',
                         onConfirm: () => setShowModal(false),
                         isConfirm: false
                     });
@@ -1838,7 +2061,7 @@ export default function Edit() {
 
 
     return (
-        <div id="root" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#1F2937' }}>
+        <div id="root" style={{ ...styles.root, display: 'flex', flexDirection: 'column', height: '100vh', background: '#1F2937' }}>
             <div ref={canvasRef} style={{ flex: 1, position: 'relative' }}>
                 <Canvas
                     shadows
@@ -2084,7 +2307,7 @@ export default function Edit() {
                                     userSelect: 'none',
                                 }}
                             >
-                                Вверх
+                                Вгору
                             </button>
                             <button
                                 onTouchStart={() => cameraVerticalInput.current = -1}
@@ -2109,39 +2332,12 @@ export default function Edit() {
                     </>
                 )}
             </div>
-            <div style={{
-                background: 'rgba(31, 41, 55, 0.7)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
-                color: '#E1E6F0',
-                padding: '15px',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '20px',
-                overflowX: 'hidden',
-                overflowY: 'auto',
-                maxHeight: '280px',
-                borderTop: '1px solid rgba(75, 85, 99, 0.5)',
-                boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.3)',
-                borderRadius: '15px 15px 0 0',
-                position: 'relative',
-                zIndex: 999,
-            }}>
-                <div style={{
-                    background: 'rgba(55,65,81,0.6)',
-                    padding: '12px',
-                    borderRadius: '10px',
-                    minWidth: '150px',
-                    flex: '1 1 auto',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                }}>
-                    <h3 style={{ margin: '0 0 10px 0', color: '#2D9CDB', fontSize: '1.2em', fontWeight: '700' }}>Инструменты</h3>
+            <div style={styles.inventoryPanel}>
+                <div style={styles.inventorySection}>
+                    <h3 style={styles.inventoryTitle}>Інструменти</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {Object.entries(TOOL_TYPES).filter(([, label]) => label !== 'Мебель').map(([key, label]) => (
-                            <button
+                        {Object.entries(TOOL_TYPES).filter(([, label]) => label !== 'Меблі').map(([key, label]) => (
+                            <HoverButton
                                 key={label}
                                 onClick={() => {
                                     setSelectedTool(label);
@@ -2152,36 +2348,21 @@ export default function Edit() {
                                     setPhantomObjectRotation(0);
                                 }}
                                 style={{
-                                    padding: '10px 15px',
-                                    background: selectedTool === label ? '#1B74E4' : 'rgba(75,85,99,0.7)',
-                                    color: selectedTool === label ? '#E1E6F0' : '#E1E6F0',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontSize: '1em',
-                                    fontWeight: '600',
-                                    transition: 'background-color 0.3s ease, transform 0.2s, box-shadow 0.3s ease',
-                                    boxShadow: selectedTool === label ? '0 4px 12px rgba(27, 116, 228, 0.4)' : 'none',
+                                    ...styles.buttonBase,
+                                    ...(selectedTool === label ? styles.toolButtonActive : styles.toolButtonInactive),
+                                    padding: '10px 15px', // Override base padding for smaller tool buttons
+                                    fontSize: '1em', // Override base font size for smaller tool buttons
                                 }}
+                                hoverStyle={selectedTool === label ? styles.toolButtonActiveHover : styles.toolButtonInactiveHover}
                             >
                                 {label}
-                            </button>
+                            </HoverButton>
                         ))}
                     </div>
                 </div>
 
-                <div style={{
-                    background: 'rgba(55,65,81,0.6)',
-                    padding: '12px',
-                    borderRadius: '10px',
-                    maxWidth: '500px',
-                    flex: '1 1 auto',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                }}>
-                    <h3 style={{ margin: '0 0 10px 0', color: '#2D9CDB', fontSize: '1.2em', fontWeight: '700' }}>Цвета</h3>
+                <div style={{ ...styles.inventorySection, maxWidth: '500px' }}>
+                    <h3 style={styles.inventoryTitle}>Кольори</h3>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
                         <input
                             type="color"
@@ -2189,32 +2370,16 @@ export default function Edit() {
                             onInput={handleColorInput}
                             onMouseUp={handleColorMouseUp}
                             onChange={() => { }}
-                            style={{
-                                width: '40px',
-                                height: '40px',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                border: '2px solid #4B5563',
-                                overflow: 'hidden',
-                                background: 'transparent',
-                                padding: 0,
-                                boxSizing: 'content-box',
-                                transition: 'border-color 0.2s ease',
-                            }}
+                            style={styles.colorInput}
                         />
                         {[...BASE_COLORS, ...userColors].map((color) => (
                             <div
                                 key={color}
                                 onClick={() => { setSelectedColor(color); }}
                                 style={{
-                                    width: '40px',
-                                    height: '40px',
+                                    ...styles.colorSwatch,
                                     background: color,
-                                    borderRadius: '8px',
-                                    border: selectedColor === color ? '3px solid #F59E0B' : '2px solid transparent',
-                                    boxShadow: selectedColor === color ? '0 0 0 1px #F59E0B' : 'none',
-                                    cursor: 'pointer',
-                                    transition: 'border 0.2s ease, transform 0.2s',
+                                    ...(selectedColor === color ? styles.colorSwatchSelected : {}),
                                 }}
                             ></div>
                         ))}
@@ -2222,77 +2387,37 @@ export default function Edit() {
                 </div>
 
                 <div style={{
-                    background: 'rgba(55,65,81,0.6)',
-                    padding: '12px',
-                    borderRadius: '10px',
+                    ...styles.inventorySection,
                     minWidth: '300px',
                     flex: '2 1 auto',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px',
                     overflowY: 'auto',
                     maxHeight: '230px',
                 }}>
-                    <h3 style={{ margin: '0 0 10px 0', color: '#2D9CDB', fontSize: '1.2em', fontWeight: '700' }}>Инвентарь мебели</h3>
+                    <h3 style={styles.inventoryTitle}>Інвентар меблів</h3>
                     <div style={{ marginBottom: '15px' }}>
-                        <h4 style={{
-                            margin: '0 0 6px 0',
-                            color: '#9CA3AF',
-                            fontSize: '1em',
-                            fontWeight: '600',
-                            borderBottom: '1px solid rgba(75, 85, 99, 0.5)',
-                            paddingBottom: '4px',
-                        }}>Название комнаты:</h4>
+                        <h4 style={styles.inventorySubTitle}>Назва кімнати:</h4>
                         <input
                             type="text"
                             value={roomName}
                             onChange={(e) => setRoomName(e.target.value)}
-                            placeholder="Введите название комнаты"
-                            style={{
-                                background: '#4B5563',
-                                color: '#E1E6F0',
-                                border: '1px solid #6B7280',
-                                borderRadius: '5px',
-                                padding: '8px 12px',
-                                fontSize: '1em',
-                                outline: 'none',
-                                width: 'calc(100% - 24px)',
-                            }}
+                            placeholder="Введіть назву кімнати"
+                            style={styles.roomNameInput}
                         />
                     </div>
                     {FURNITURE_CATEGORIES && Object.entries(FURNITURE_CATEGORIES).map(([category, items]) => (
                         <div key={category} style={{ marginBottom: '8px' }}>
-                            <h4 style={{
-                                margin: '0 0 6px 0',
-                                color: '#9CA3AF',
-                                fontSize: '1em',
-                                fontWeight: '600',
-                                borderBottom: '1px solid rgba(75, 85, 99, 0.5)',
-                                paddingBottom: '4px',
-                            }}>{category}</h4>
+                            <h4 style={styles.inventorySubTitle}>{category}</h4>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                 {items && items.map(({ type, label }) => (
-                                    <div
+                                    <HoverDiv
                                         key={type}
                                         onMouseDown={() => handleFurnitureDragStart(type)}
-                                        style={{
-                                            padding: '8px 12px',
-                                            background: 'rgba(31, 41, 55, 0.8)',
-                                            color: '#E1E6F0',
-                                            borderRadius: '8px',
-                                            cursor: 'grab',
-                                            border: '1px solid rgba(75, 85, 99, 0.5)',
-                                            userSelect: 'none',
-                                            fontSize: '0.9em',
-                                            whiteSpace: 'nowrap',
-                                            transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.2s',
-                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                        }}
-                                        title={`Перетащите для размещения: ${label}`}
+                                        style={styles.furnitureItem}
+                                        hoverStyle={styles.furnitureItemHover}
+                                        title={`Перетягніть для розміщення: ${label}`}
                                     >
                                         {label}
-                                    </div>
+                                    </HoverDiv>
                                 ))}
                             </div>
                         </div>
@@ -2300,79 +2425,40 @@ export default function Edit() {
                 </div>
 
                 <div style={{
-                    background: 'rgba(55,65,81,0.6)',
-                    padding: '12px',
-                    borderRadius: '10px',
+                    ...styles.inventorySection,
                     minWidth: '150px',
                     flex: '0 0 auto',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
                 }}>
-                    <button
+                    <HoverButton
                         onClick={saveRoomState}
-                        style={{
-                            padding: '10px 15px',
-                            background: '#28A745',
-                            color: '#FFFFFF',
-                            borderRadius: '8px',
-                            border: 'none',
-                            cursor: 'pointer',
-                            width: '100%',
-                            fontSize: '1em',
-                            fontWeight: '600',
-                            transition: 'background-color 0.3s ease, transform 0.2s, box-shadow 0.3s ease',
-                            boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
-                        }}
+                        style={{ ...styles.buttonBase, ...styles.saveButton }}
+                        hoverStyle={styles.saveButtonHover}
                     >
-                        Сохранить
-                    </button>
-                    <button
+                        Зберегти
+                    </HoverButton>
+                    <HoverButton
                         onClick={resetAllState}
-                        style={{
-                            padding: '10px 15px',
-                            background: '#DC2626',
-                            color: '#FFFFFF',
-                            borderRadius: '8px',
-                            border: 'none',
-                            cursor: 'pointer',
-                            width: '100%',
-                            fontSize: '1em',
-                            fontWeight: '600',
-                            transition: 'background-color 0.3s ease, transform 0.2s, box-shadow 0.3s ease',
-                            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
-                        }}
+                        style={{ ...styles.buttonBase, ...styles.clearButton }}
+                        hoverStyle={styles.clearButtonHover}
                     >
-                        Очистить все
-                    </button>
+                        Очистити все
+                    </HoverButton>
 
-                    <button
+                    <HoverButton
                         onClick={() => {
                             setModalContent({
-                                title: 'Выйти без сохранения',
-                                message: 'Ваши изменения не сохранены. Вы уверены, что хотите выйти?',
+                                title: 'Вийти без збереження',
+                                message: 'Ваші зміни не збережено. Ви впевнені, що хочете вийти?',
                                 onConfirm: () => { setShowModal(false); document.location.href = "/"; },
                                 isConfirm: true
                             });
                             setShowModal(true);
                         }}
-                        style={{
-                            padding: '10px 15px',
-                            background: '#545454ff',
-                            color: '#E1E6F0',
-                            borderRadius: '8px',
-                            border: 'none',
-                            cursor: 'pointer',
-                            width: '100%',
-                            fontSize: '1em',
-                            fontWeight: '600',
-                            transition: 'background-color 0.3s ease, transform 0.2s, box-shadow 0.3s ease',
-                            boxShadow: '0 4px 12px rgba(65, 65, 66, 0.3)',
-                        }}
+                        style={{ ...styles.buttonBase, ...styles.exitButton }}
+                        hoverStyle={styles.exitButtonHover}
                     >
-                        Выйти без сохранения
-                    </button>
+                        Вийти без збереження
+                    </HoverButton>
                 </div>
             </div>
             <Tutorial show={showTutorial} onClose={() => setShowTutorial(false)} />
