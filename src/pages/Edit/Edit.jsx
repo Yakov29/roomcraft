@@ -5,7 +5,6 @@ import { GridHelper, Vector3, MeshStandardMaterial, Raycaster, Plane, Euler, Qua
 import * as THREE from 'three';
 import { useParams, useNavigate } from 'react-router-dom';
 
-// Constants for room dimensions and camera settings
 const CELL_SIZE = 1;
 const WALL_HEIGHT = 3;
 const INITIAL_GRID_SIZE = 16;
@@ -19,59 +18,58 @@ const VERTICAL_MOVEMENT_SPEED = 0.3;
 const ROTATION_SPEED_KEYBOARD_YAW = 0.1;
 const ROTATION_SPEED_KEYBOARD_PITCH = 0.1;
 
-const LERP_FACTOR = 0.2; // For smooth camera movement
+const LERP_FACTOR = 0.2;
 
-// Tool types for the UI
 const TOOL_TYPES = {
-    wall: '🧱 Стіна',
-    floor: '⬜ Підлога',
-    paint: '🎨 Фарба',
-    furniture: 'Меблі',
+    wall: '🧱 Стена',
+    floor: '⬜ Пол',
+    paint: '🎨 Краска',
+    furniture: 'Мебель',
 };
 
-// Base colors available to the user
 const BASE_COLORS = ['#E1E6F0', '#2C3A59', '#2D9CDB', '#FFA94D', '#228B22'];
 
-// Materials for highlighting and phantom objects
 const hoverMaterial = new MeshStandardMaterial({ color: "#ADD8E6", transparent: true, opacity: 0.3 });
 const phantomMaterial = new MeshStandardMaterial({ color: "#2D9CDB", transparent: true, opacity: 0.5 });
 
-// Furniture categories with their types, labels, and dimensions for snapping
 const FURNITURE_CATEGORIES = {
-    '🛋️ Вітальня': [
+    '🛋️ Гостиная': [
         { type: 'sofa', label: 'Диван', dimensions: { width: 1.6, depth: 0.8, height: 0.8 } },
-        { type: 'chair', label: 'Крісло', dimensions: { width: 0.6, depth: 0.6, height: 0.8 } },
-        { type: 'table', label: 'Стіл', dimensions: { width: 1.0, depth: 0.8, height: 0.8 } },
+        { type: 'chair', label: 'Кресло', dimensions: { width: 0.6, depth: 0.6, height: 0.8 } },
+        { type: 'table', label: 'Стол', dimensions: { width: 1.0, depth: 0.8, height: 0.8 } },
     ],
-    '🚪 Прорізи': [
-        { type: 'door', label: 'Двері', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
-        { type: 'window', label: 'Вікно', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
+    '🚪 Проёмы': [
+        { type: 'door', label: 'Дверь', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
+        { type: 'window', label: 'Окно', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
     ],
     '🧑‍🍳 Кухня': [
-        { type: 'kitchenTable', label: 'Кухонний стіл', dimensions: { width: 1.2, depth: 0.7, height: 0.8 } },
-        { type: 'kitchenCabinet', label: 'Кухонна шафа', dimensions: { width: 1.0, depth: 0.5, height: 1.0 } },
+        { type: 'kitchenTable', label: 'Кухонный стол', dimensions: { width: 1.2, depth: 0.7, height: 0.8 } },
+        { type: 'kitchenCabinet', label: 'Кухонный шкаф', dimensions: { width: 1.0, depth: 0.5, height: 1.0 } },
     ],
     '🌳 Сад': [
-        { type: 'outdoorChair', label: 'Вуличне крісло', dimensions: { width: 0.6, depth: 0.6, height: 0.5 } },
-        { type: 'outdoorTable', label: 'Вуличний стіл', dimensions: { width: 1.0, depth: 1.0, height: 0.75 } },
+        { type: 'outdoorChair', label: 'Уличный стул', dimensions: { width: 0.6, depth: 0.6, height: 0.5 } },
+        { type: 'outdoorTable', label: 'Уличный стол', dimensions: { width: 1.0, depth: 1.0, height: 0.75 } },
     ],
     '🛏️ Спальня': [
-        { type: 'bed', label: 'Ліжко', dimensions: { width: 1.9, depth: 1.3, height: 0.5 } },
+        { type: 'bed', label: 'Кровать', dimensions: { width: 1.9, depth: 1.3, height: 0.5 } },
         { type: 'lamp', label: 'Лампа', dimensions: { width: 0.3, depth: 0.3, height: 1.1 } },
-        { type: 'cabinet', label: 'Шафа', dimensions: { width: 1.0, depth: 0.5, height: 2.0 } },
+        { type: 'cabinet', label: 'Шкаф', dimensions: { width: 1.0, depth: 0.5, height: 2.0 } },
     ],
-    '💻 Електроніка': [
-        { type: 'tv', label: 'Телевізор', dimensions: { width: 1.6, depth: 0.6, height: 1.0 } },
-        { type: 'console', label: 'Ігрова приставка', dimensions: { width: 0.4, depth: 0.6, height: 0.1 } },
-        { type: 'computerSetup', label: 'Компʼютерний сетап', dimensions: { width: 1.6, depth: 0.7, height: 1.0 } },
+    '💻 Электроника': [
+        { type: 'tv', label: 'Телевизор', dimensions: { width: 1.6, depth: 0.6, height: 1.0 } },
+        { type: 'console', label: 'Игровая приставка', dimensions: { width: 0.4, depth: 0.6, height: 0.1 } },
+        { type: 'computerSetup', label: 'Компьютерный сетап', dimensions: { width: 1.6, depth: 0.7, height: 1.0 } },
     ],
-    '💡 Освітлення': [
-        { type: 'ceilingLamp', label: 'Стельова лампа', dimensions: { width: 0.6, depth: 0.6, height: 0.6 } },
-        { type: 'rgbStrip', label: 'RGB стрічка', dimensions: { width: 1.0, depth: 0.05, height: 0.02 } },
+    '💡 Освещение': [
+        { type: 'ceilingLamp', label: 'Потолочная лампа', dimensions: { width: 0.6, depth: 0.6, height: 0.6 } },
+        { type: 'rgbStrip', label: 'RGB лента', dimensions: { width: 1.0, depth: 0.05, height: 0.02 } },
+    ],
+    '🌱 Растения': [
+        { type: 'pottedPlant', label: 'Горшечное растение', dimensions: { width: 0.4, depth: 0.4, height: 0.8 } },
+        { type: 'tallPlant', label: 'Высокое растение', dimensions: { width: 0.5, depth: 0.5, height: 1.5 } },
     ]
 };
 
-// Function to check WebGL support
 const isWebGLSupported = () => {
     try {
         const canvas = document.createElement('canvas');
@@ -81,12 +79,10 @@ const isWebGLSupported = () => {
     }
 };
 
-// Function to detect mobile devices
 const isMobileDevice = () => {
     return (typeof window.orientation !== "undefined") || (navigator.userAgent.indexOf('Mobi') !== -1);
 };
 
-// Function to calculate the position for snapping furniture to a wall
 const calculateWallSnapPosition = (x, z, walls, floorTiles, getKey, furnitureItem) => {
     if (!furnitureItem || !furnitureItem.dimensions) {
         return { x: x, z: z, snapped: false, offsetX: 0, offsetZ: 0 };
@@ -95,24 +91,18 @@ const calculateWallSnapPosition = (x, z, walls, floorTiles, getKey, furnitureIte
     const { width, depth } = furnitureItem.dimensions;
     const rotation = furnitureItem.rotation || 0;
 
-    // Calculate effective half-dimensions considering rotation
     const halfEffectiveWidth = (Math.abs(Math.cos(rotation)) * width + Math.abs(Math.sin(rotation)) * depth) / 2;
     const halfEffectiveDepth = (Math.abs(Math.sin(rotation)) * width + Math.abs(Math.cos(rotation)) * depth) / 2;
 
     const baseKey = getKey(x, z);
     if (!floorTiles[baseKey]) {
-        return { x: x, z: z, snapped: false, offsetX: 0, offsetZ: 0 }; // Must be on a floor tile
+        return { x: x, z: z, snapped: false, offsetX: 0, offsetZ: 0 };
     }
 
-    // Define potential snap positions relative to the cell center
     const potentialSnaps = [
-        // Wall to the left (negative X)
         { wallX: x - 1, wallZ: z, offsetX: -0.5 + halfEffectiveWidth, offsetZ: 0, direction: 'left' },
-        // Wall to the right (positive X)
         { wallX: x + 1, wallZ: z, offsetX: 0.5 - halfEffectiveWidth, offsetZ: 0, direction: 'right' },
-        // Wall to the front (negative Z)
         { wallX: x, wallZ: z - 1, offsetX: 0, offsetZ: -0.5 + halfEffectiveDepth, direction: 'front' },
-        // Wall to the back (positive Z)
         { wallX: x, wallZ: z + 1, offsetX: 0, offsetZ: 0.5 - halfEffectiveDepth, direction: 'back' },
     ];
 
@@ -121,7 +111,7 @@ const calculateWallSnapPosition = (x, z, walls, floorTiles, getKey, furnitureIte
 
     for (const snap of potentialSnaps) {
         const wallKey = getKey(snap.wallX, snap.wallZ);
-        if (walls[wallKey] && !walls[wallKey].hasOpening) { // Only snap to solid walls
+        if (walls[wallKey] && !walls[wallKey].hasOpening) {
             const distance = Math.sqrt(
                 Math.pow(snap.offsetX, 2) +
                 Math.pow(snap.offsetZ, 2)
@@ -130,8 +120,8 @@ const calculateWallSnapPosition = (x, z, walls, floorTiles, getKey, furnitureIte
             if (distance < minDistance) {
                 minDistance = distance;
                 bestSnap = {
-                    x: x, // Base cell X
-                    z: z, // Base cell Z
+                    x: x,
+                    z: z,
                     snapped: true,
                     offsetX: snap.offsetX,
                     offsetZ: snap.offsetZ,
@@ -143,7 +133,6 @@ const calculateWallSnapPosition = (x, z, walls, floorTiles, getKey, furnitureIte
     return bestSnap;
 };
 
-// Reusable Modal Component
 const Modal = ({ show, title, message, onClose, onConfirm, isConfirm = false }) => {
     if (!show) return null;
 
@@ -189,7 +178,7 @@ const Modal = ({ show, title, message, onClose, onConfirm, isConfirm = false }) 
                                 opacity: 0.8,
                             }}
                         >
-                            Скасувати
+                            Отмена
                         </button>
                     )}
                     <button
@@ -205,18 +194,13 @@ const Modal = ({ show, title, message, onClose, onConfirm, isConfirm = false }) 
                             marginLeft: isConfirm ? 'auto' : '0',
                         }}
                     >
-                        {isConfirm ? 'Підтвердити' : 'ОК'}
+                        {isConfirm ? 'Подтвердить' : 'ОК'}
                     </button>
                 </div>
             </div>
         </div>
     );
 };
-
-// Furniture Components (Chair, Table, Sofa, etc.) - unchanged from previous version,
-// except for the addition of dimensions in FURNITURE_CATEGORIES above.
-// For brevity, I'm omitting their full definitions here, assuming they are present
-// as in the original file. Only the first one is shown as an example.
 
 const Chair = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
     <group rotation={[0, rotation, 0]}>
@@ -617,6 +601,57 @@ const RgbStrip = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
     );
 });
 
+const PottedPlant = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
+    const potMaterial = new MeshStandardMaterial({ color: "#8B4513" });
+    const plantMaterial = new MeshStandardMaterial({ color: "#228B22" });
+
+    return (
+        <group rotation={[0, rotation, 0]}>
+            <mesh position={[0, 0.15, 0]} material={isPhantom ? phantomMaterial : potMaterial}>
+                <cylinderGeometry args={[0.15, 0.2, 0.3, 16]} />
+            </mesh>
+            <mesh position={[0, 0.45, 0]} material={isPhantom ? phantomMaterial : plantMaterial}>
+                <sphereGeometry args={[0.2, 16, 16]} />
+            </mesh>
+            <mesh position={[0.1, 0.55, 0.1]} material={isPhantom ? phantomMaterial : plantMaterial}>
+                <boxGeometry args={[0.1, 0.3, 0.1]} />
+            </mesh>
+            <mesh position={[-0.1, 0.5, -0.1]} material={isPhantom ? phantomMaterial : plantMaterial}>
+                <boxGeometry args={[0.1, 0.2, 0.1]} />
+            </mesh>
+            {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+        </group>
+    );
+});
+
+const TallPlant = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
+    const potMaterial = new MeshStandardMaterial({ color: "#696969" });
+    const stemMaterial = new MeshStandardMaterial({ color: "#556B2F" });
+    const leafMaterial = new MeshStandardMaterial({ color: "#3CB371" });
+
+    return (
+        <group rotation={[0, rotation, 0]}>
+            <mesh position={[0, 0.1, 0]} material={isPhantom ? phantomMaterial : potMaterial}>
+                <cylinderGeometry args={[0.2, 0.25, 0.2, 16]} />
+            </mesh>
+            <mesh position={[0, 0.7, 0]} material={isPhantom ? phantomMaterial : stemMaterial}>
+                <cylinderGeometry args={[0.03, 0.03, 1.2, 8]} />
+            </mesh>
+            <mesh position={[0.2, 1.2, 0]} rotation={[0, 0, Math.PI / 4]} material={isPhantom ? phantomMaterial : leafMaterial}>
+                <boxGeometry args={[0.1, 0.6, 0.02]} />
+            </mesh>
+            <mesh position={[-0.2, 1.0, 0.1]} rotation={[0, 0, -Math.PI / 6]} material={isPhantom ? phantomMaterial : leafMaterial}>
+                <boxGeometry args={[0.1, 0.5, 0.02]} />
+            </mesh>
+            <mesh position={[0, 0.9, -0.2]} rotation={[Math.PI / 6, 0, 0]} material={isPhantom ? phantomMaterial : leafMaterial}>
+                <boxGeometry args={[0.02, 0.4, 0.1]} />
+            </mesh>
+            {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+        </group>
+    );
+});
+
+
 const WallPhantom = React.memo(({ hasOpening }) => {
     if (hasOpening) {
         return (
@@ -671,62 +706,61 @@ const FloorPhantom = React.memo(() => (
     </mesh>
 ));
 
-// Tutorial component - unchanged
 const Tutorial = ({ show, onClose }) => {
     const [step, setStep] = useState(0);
 
     const steps = [
         {
-            title: 'Ласкаво просимо до Дизайнера Кімнат!',
-            text: 'Давайте швидко освоїмо основи. Натисніть "Далі", щоб почати.'
+            title: 'Добро пожаловать в Room Designer!',
+            text: 'Давайте быстро освоим основы. Нажмите "Далее", чтобы начать.'
         },
         {
-            title: 'Інструменти та Кольори',
-            text: `У нижній частині екрана ви бачите панель інструментів (🧱, ⬜, 🎨) і кольорів. Виберіть інструмент та колір, щоб почати будівництво.`
+            title: 'Инструменты и Цвета',
+            text: `В нижней части экрана вы видите панель инструментов (🧱, ⬜, 🎨) и цветов. Выберите инструмент и цвет, чтобы начать строительство.`
         },
         {
-            title: 'Створення Підлоги',
-            text: `Виберіть інструмент "⬜ Підлога". Клацніть **ЛІВОЮ** кнопкою миші на сітці в 3D-вікні, щоб почати перетягування плитки підлоги. Відпустіть, щоб розмістити.`
+            title: 'Создание Пола',
+            text: `Выберите инструмент "⬜ Пол". Щелкните **ЛЕВОЙ** кнопкой мыши на сетке в 3D-окне, чтобы начать перетаскивание плитки пола. Отпустите, чтобы разместить.`
         },
         {
-            title: 'Розміщення Стін',
-            text: `Виберіть інструмент "🧱 Стіна". Клацніть **ЛІВОЮ** кнопкою миші на існуючій плитці підлоги, щоб почати перетягування стіни. Відпустіть, щоб розмістити.`
+            title: 'Размещение Стен',
+            text: `Выберите инструмент "🧱 Стена". Щелкните **ЛЕВОЙ** кнопкой мыши на существующей плитке пола, чтобы начать перетаскивание стены. Отпустите, чтобы разместить.`
         },
         {
-            title: 'Розміщення Меблів (Перетягування)',
-            text: 'Клацніть **ЛІВОЮ** кнопкою миші на іконці предмета в інвентарі (знизу) і, не відпускаючи, перетягніть його на потрібну плитку підлоги. Відпустіть кнопку миші, щоб розмістити предмет.'
+            title: 'Размещение Мебели (Перетаскивание)',
+            text: 'Щелкните **ЛЕВОЙ** кнопкой мыши на иконке предмета в инвентаре (снизу) и, не отпуская, перетащите его на нужную плитку пола. Отпустите кнопку мыши, чтобы разместить предмет.'
         },
         {
-            title: 'Фарбування Об\'єктів (Перетягування)',
-            text: `Виберіть інструмент "🎨 Фарба" та новий колір. Клацніть **ЛІВОЮ** кнопкою миші на плитці підлоги або на дверях/вікні і, не відпускаючи, перетягуйте курсор, щоб пофарбувати їх.`
+            title: 'Окрашивание Объектов (Перетаскивание)',
+            text: `Выберите инструмент "🎨 Краска" и новый цвет. Щелкните **ЛЕВОЙ** кнопкой мыши на плитке пола или на мебели и, не отпуская, перетаскивайте курсор, чтобы покрасить их.`
         },
         {
-            title: 'Видалення Об\'єктів (Правий Клік)',
-            text: 'Ви можете видалити будь-який об\'єкт (підлогу, стіну, меблі), клацнувши по ньому **ПРАВОЮ** кнопкою миші.'
+            title: 'Удаление Объектов (Правый Клик)',
+            text: 'Вы можете удалить любой объект (пол, стену, мебель), щелкнув по нему **ПРАВОЙ** кнопкой мыши.'
         },
         {
-            title: 'Поворот Об\'єктів',
-            text: 'Щоб **повернути** об\'єкт (фантомний під час перетягування або вже розміщений), наведіть на нього курсор і натисніть **"R"** на клавіатурі.'
+            title: 'Поворот Объектов',
+            text: 'Чтобы **повернуть** объект (фантомный во время перетаскивания или уже размещенный), наведите на него курсор и нажмите **"R"** на клавиатуре.'
         },
         {
-            title: 'Привязка до Стіни (Нова функція!)',
-            text: 'Щоб **прив\'язати** меблі до краю блока (до стіни), наведіть на об\'єкт і натисніть **"T"**. Об\'єкт переміститься до найближчої стіни замість центру блока.'
+            title: 'Привязка к Стене (Новая функция!)',
+            text: 'Чтобы **привязать** мебель к краю блока (к стене), наведите на объект и нажмите **"T"**. Объект переместится к ближайшей стене вместо центра блока.'
         },
         {
-            title: 'Зберегти Проєкт',
-            text: 'Використовуйте кнопку "Зберегти" в нижній панелі, щоб зберегти поточний стан вашої кімнати. Це дозволить вам повернутися до нього пізніше.'
+            title: 'Сохранить Проект',
+            text: 'Используйте кнопку "Сохранить" в нижней панели, чтобы сохранить текущее состояние вашей комнаты. Это позволит вам вернуться к нему позже.'
         },
         {
-            title: 'Скинути Проєкт',
-            text: 'Якщо ви хочете почати все заново, скористайтеся кнопкою "Очистити все" в нижній панелі.'
+            title: 'Сбросить Проект',
+            text: 'Если вы хотите начать все заново, воспользуйтесь кнопкой "Очистить все" в нижней панели.'
         },
         {
-            title: 'Управління Камерою (Клавіатура)',
-            text: 'Використовуйте клавіші **WASD** для переміщення вперед/назад/вбік. \nВикористовуйте **E** для руху вгору і **Q** для руху вниз.\nВикористовуйте **стрілки вліво/вправо** для повороту камери.\nВикористовуйте **стрілки вгору/вниз** для нахилу камери вгору/вниз.'
+            title: 'Управление Камерой (Клавиатура)',
+            text: 'Используйте клавиши **WASD** для перемeщения вперед/назад/вбок. \nИспользуйте **E** для движения вверх и **Q** для движения вниз.\nИспользуйте **стрелки влево/вправо** для поворота камеры.\nИспользуйте **стрелки вверх/вниз** для наклона камеры вверх/вниз.'
         },
         {
             title: 'Готово!',
-            text: 'Ви освоїли основи! Насолоджуйтесь створенням свого дизайну!'
+            text: 'Вы освоили основы! Наслаждайтесь созданием своего дизайна!'
         }
     ];
 
@@ -790,7 +824,7 @@ const Tutorial = ({ show, onClose }) => {
                                 opacity: 0.8,
                             }}
                         >
-                            Пропустити
+                            Пропустить
                         </button>
                     ) : (
                         <div />
@@ -808,7 +842,7 @@ const Tutorial = ({ show, onClose }) => {
                             marginLeft: step < steps.length - 1 ? 'auto' : '0',
                         }}
                     >
-                        {step < steps.length - 1 ? 'Далі' : 'Почати'}
+                        {step < steps.length - 1 ? 'Далее' : 'Начать'}
                     </button>
                 </div>
             </div>
@@ -850,13 +884,12 @@ export default function Edit() {
     const [showModal, setShowModal] = useState(false);
     const [modalContent, setModalContent] = useState({ title: '', message: '', onConfirm: null, isConfirm: false });
 
-    // State for mobile controls
     const [isMobile, setIsMobile] = useState(false);
-    const mobileMovementInput = useRef({ forward: 0, backward: 0, left: 0, right: 0 }); // For mobile movement buttons
+    const mobileMovementInput = useRef({ forward: 0, backward: 0, left: 0, right: 0 });
     const cameraRotationInput = useRef({ yaw: 0, pitch: 0 });
     const cameraVerticalInput = useRef(0);
 
-    const keyPressed = useRef({}); // For keyboard controls
+    const keyPressed = useRef({});
 
     const initialCameraQuaternion = useMemo(() => {
         const tempCamera = new THREE.Camera();
@@ -868,12 +901,11 @@ export default function Edit() {
     const targetCameraPosition = useRef(new Vector3(...INITIAL_CAMERA_POSITION));
     const targetCameraQuaternion = useRef(initialCameraQuaternion);
 
-    // Check WebGL support and mobile device on component mount
     useEffect(() => {
         if (!isWebGLSupported()) {
             setModalContent({
-                title: 'Непідтримуваний Браузер/Пристрій',
-                message: 'Ваш браузер або пристрій не підтримує WebGL, необхідний для роботи цього додатка. Будь ласка, спробуйте інший браузер або пристрій.',
+                title: 'Неподдерживаемый браузер/устройство',
+                message: 'Ваш браузер или устройство не поддерживает WebGL, необходимый для работы этого приложения. Пожалуйста, попробуйте другой браузер или устройство.',
                 onConfirm: () => navigate('/'),
                 isConfirm: false
             });
@@ -882,14 +914,12 @@ export default function Edit() {
 
         setIsMobile(isMobileDevice());
 
-        // No nipplejs needed now, so remove its initialization
         return () => {
-            // Cleanup if any specific mobile listeners were added
         };
     }, [navigate]);
 
     const resetAllState = useCallback(() => {
-        console.log('Скидання всіх станів...');
+        console.log('Сброс всех состояний...');
         setWalls({});
         setFurniture({});
         setFloorTiles({});
@@ -928,7 +958,6 @@ export default function Edit() {
                 const currentFurniture = furniture[key];
                 const newRotation = ((currentFurniture.rotation || 0) + Math.PI / 2) % (Math.PI * 2);
 
-                // Find the furniture item's dimensions from FURNITURE_CATEGORIES
                 let furnitureDimensions = null;
                 for (const category in FURNITURE_CATEGORIES) {
                     const found = FURNITURE_CATEGORIES[category].find(item => item.type === currentFurniture.type);
@@ -938,7 +967,6 @@ export default function Edit() {
                     }
                 }
 
-                // Recalculate snap position if snapped
                 let newOffsetX = 0;
                 let newOffsetZ = 0;
                 let isSnapped = false;
@@ -978,14 +1006,12 @@ export default function Edit() {
         }
     }, [furniture, walls, getKey, hoveredCell, isDragging, phantomObjectPosition, draggedType, floorTiles]);
 
-    // Function to snap object to wall
     const snapToWall = useCallback(() => {
         if (hoveredCell) {
             const key = getKey(hoveredCell.x, hoveredCell.z);
             const furnitureItem = furniture[key];
 
             if (furnitureItem && furnitureItem.type !== 'door' && furnitureItem.type !== 'window') {
-                // Find the furniture item's dimensions from FURNITURE_CATEGORIES
                 let furnitureDimensions = null;
                 for (const category in FURNITURE_CATEGORIES) {
                     const found = FURNITURE_CATEGORIES[category].find(item => item.type === furnitureItem.type);
@@ -1000,7 +1026,6 @@ export default function Edit() {
                     const snapResult = calculateWallSnapPosition(hoveredCell.x, hoveredCell.z, walls, floorTiles, getKey, currentItemWithDims);
 
                     if (snapResult.snapped && !furnitureItem.isSnapped) {
-                        // Snap to wall
                         setFurniture((prev) => ({
                             ...prev,
                             [key]: {
@@ -1011,7 +1036,6 @@ export default function Edit() {
                             },
                         }));
                     } else if (furnitureItem.isSnapped) {
-                        // Unsnap and return to center
                         setFurniture((prev) => ({
                             ...prev,
                             [key]: {
@@ -1029,14 +1053,14 @@ export default function Edit() {
 
     const deleteObject = useCallback((x, z) => {
         const key = getKey(x, z);
-        console.log(`Attempting to delete object at ${key}`);
+        console.log(`Попытка удалить объект по адресу ${key}`);
 
         if (furniture[key]) {
             const removedFurnitureType = furniture[key].type;
             setFurniture((prev) => {
                 const copy = { ...prev };
                 delete copy[key];
-                console.log(`Deleted furniture at ${key}. New furniture state:`, copy);
+                console.log(`Мебель удалена по адресу ${key}. Новое состояние мебели:`, copy);
                 return copy;
             });
 
@@ -1045,7 +1069,7 @@ export default function Edit() {
                     const copy = { ...prev };
                     if (copy[key] && copy[key].hasOpening) {
                         delete copy[key];
-                        console.log(`Deleted associated opening wall at ${key}. New wall state:`, copy);
+                        console.log(`Удалена связанная стена с проемом по адресу ${key}. Новое состояние стен:`, copy);
                     }
                     return copy;
                 });
@@ -1054,14 +1078,14 @@ export default function Edit() {
             setWalls((prev) => {
                 const copy = { ...prev };
                 delete copy[key];
-                console.log(`Deleted wall at ${key}. New wall state:`, copy);
+                console.log(`Стена удалена по адресу ${key}. Новое состояние стен:`, copy);
                 return copy;
             });
         } else if (floorTiles[key]) {
             setFloorTiles((prev) => {
                 const copy = { ...prev };
                 delete copy[key];
-                console.log(`Deleted floor tile at ${key}. New floor state:`, copy);
+                console.log(`Плитка пола удалена по адресу ${key}. Новое состояние пола:`, copy);
                 return copy;
             });
         }
@@ -1074,39 +1098,39 @@ export default function Edit() {
     }, [deleteObject]);
 
     function CanvasContent({
-        getKey,
-        rotateObject,
-        snapToWall,
-        deleteObject,
-        checkGridExpansion,
-        selectedTool,
-        selectedColor,
-        furniture,
-        walls,
-        floorTiles,
-        hoveredCell,
-        setHoveredCell,
-        setFloorTiles,
-        setWalls,
-        setFurniture,
-        isDragging,
-        draggedType,
-        draggedSubType,
-        phantomObjectPosition,
-        setPhantomObjectPosition,
-        phantomObjectRotation,
-        setPhantomObjectRotation,
-        setIsDragging,
-        setDraggedType,
-        setDraggedSubType,
-        handleRightClick,
-        keyPressed,
-        targetCameraPosition,
-        targetCameraQuaternion,
-        mobileMovementInput,
-        cameraRotationInput,
-        cameraVerticalInput
-    }) {
+                               getKey,
+                               rotateObject,
+                               snapToWall,
+                               deleteObject,
+                               checkGridExpansion,
+                               selectedTool,
+                               selectedColor,
+                               furniture,
+                               walls,
+                               floorTiles,
+                               hoveredCell,
+                               setHoveredCell,
+                               setFloorTiles,
+                               setWalls,
+                               setFurniture,
+                               isDragging,
+                               draggedType,
+                               draggedSubType,
+                               phantomObjectPosition,
+                               setPhantomObjectPosition,
+                               phantomObjectRotation,
+                               setPhantomObjectRotation,
+                               setIsDragging,
+                               setDraggedType,
+                               setDraggedSubType,
+                               handleRightClick,
+                               keyPressed,
+                               targetCameraPosition,
+                               targetCameraQuaternion,
+                               mobileMovementInput,
+                               cameraRotationInput,
+                               cameraVerticalInput
+                           }) {
         const { gl, camera } = useThree();
         const PI_2 = Math.PI / 2;
 
@@ -1157,7 +1181,6 @@ export default function Edit() {
             forward.normalize();
             right.normalize();
 
-            // Keyboard controls
             if (keyPressed.current['w']) {
                 newCameraPosition.addScaledVector(forward, moveAmount);
             }
@@ -1178,7 +1201,6 @@ export default function Edit() {
                 newCameraPosition.y -= verticalMoveAmount;
             }
 
-            // Mobile movement buttons
             if (mobileMovementInput.current.forward) {
                 newCameraPosition.addScaledVector(forward, moveAmount);
             }
@@ -1192,7 +1214,6 @@ export default function Edit() {
                 newCameraPosition.addScaledVector(right, moveAmount);
             }
 
-            // Mobile vertical movement buttons
             newCameraPosition.y += cameraVerticalInput.current * verticalMoveAmount;
 
 
@@ -1201,7 +1222,6 @@ export default function Edit() {
 
             let currentEuler = new Euler().setFromQuaternion(camera.quaternion, 'YXZ');
 
-            // Keyboard rotation
             if (keyPressed.current['arrowleft']) {
                 currentEuler.y += rotateAmountYaw;
             }
@@ -1215,12 +1235,11 @@ export default function Edit() {
                 currentEuler.x = Math.min(PI_2 - 0.01, currentEuler.x + rotateAmountPitch);
             }
 
-            // Mobile arrow button rotation
             currentEuler.y += cameraRotationInput.current.yaw * rotateAmountYaw;
             currentEuler.x = Math.max(-PI_2 + 0.01, Math.min(PI_2 - 0.01, currentEuler.x + cameraRotationInput.current.pitch * rotateAmountPitch));
 
 
-            currentEuler.z = 0; // Keep camera upright
+            currentEuler.z = 0;
 
             targetCameraQuaternion.current.setFromEuler(currentEuler);
             camera.quaternion.slerp(targetCameraQuaternion.current, LERP_FACTOR);
@@ -1244,7 +1263,7 @@ export default function Edit() {
 
         const handlePointerDown = useCallback((e) => {
             const domEvent = e.nativeEvent || e;
-            if (domEvent.button === 2) { // Right click
+            if (domEvent.button === 2) {
                 domEvent.preventDefault();
                 return;
             }
@@ -1261,10 +1280,16 @@ export default function Edit() {
 
                 if (selectedTool === TOOL_TYPES.paint && hoveredCell) {
                     const key = getKey(hoveredCell.x, hoveredCell.z);
-                    if (floorTiles[key]) {
-                        setFloorTiles((prev) => ({ ...prev, [key]: selectedColor }));
-                    } else if (furniture[key] && (furniture[key].type === 'door' || furniture[key].type === 'window')) {
-                        setFurniture((prev) => ({ ...prev, [key]: { ...prev[key], color: selectedColor } }));
+                    const targetFurniture = furniture[key];
+
+                    if (targetFurniture) {
+                        if (targetFurniture.color !== selectedColor) {
+                            setFurniture((prev) => ({ ...prev, [key]: { ...prev[key], color: selectedColor } }));
+                        }
+                    } else if (floorTiles[key]) {
+                        if (floorTiles[key] !== selectedColor) {
+                            setFloorTiles((prev) => ({ ...prev, [key]: selectedColor }));
+                        }
                     }
                 }
                 domEvent.stopPropagation();
@@ -1287,11 +1312,15 @@ export default function Edit() {
 
                     if (draggedType === TOOL_TYPES.paint) {
                         const key = getKey(newHoveredCell.x, newHoveredCell.z);
-                        if (floorTiles[key] && floorTiles[key] !== selectedColor) {
-                            setFloorTiles((prev) => ({ ...prev, [key]: selectedColor }));
-                        } else if (furniture[key] && (furniture[key].type === 'door' || furniture[key].type === 'window')) {
-                            if (furniture[key].color !== selectedColor) {
+                        const targetFurniture = furniture[key];
+
+                        if (targetFurniture) {
+                            if (targetFurniture.color !== selectedColor) {
                                 setFurniture((prev) => ({ ...prev, [key]: { ...prev[key], color: selectedColor } }));
+                            }
+                        } else if (floorTiles[key]) {
+                            if (floorTiles[key] !== selectedColor) {
+                                setFloorTiles((prev) => ({ ...prev, [key]: selectedColor }));
                             }
                         }
                     }
@@ -1319,7 +1348,6 @@ export default function Edit() {
                         setFurniture((prev) => {
                             const copy = { ...prev };
                             if (copy[key] && (copy[key].type === 'door' || copy[key].type === 'window')) {
-                                // Keep doors/windows when placing floor
                             } else {
                                 delete copy[key];
                             }
@@ -1336,7 +1364,6 @@ export default function Edit() {
                     } else if (draggedType === TOOL_TYPES.furniture) {
                         if (floorTiles[key]) {
                             const existingFurniture = furniture[key];
-                            // Get dimensions for the phantom object
                             let phantomDimensions = null;
                             for (const category in FURNITURE_CATEGORIES) {
                                 const found = FURNITURE_CATEGORIES[category].find(item => item.type === draggedSubType);
@@ -1347,16 +1374,16 @@ export default function Edit() {
                             }
 
                             if (existingFurniture && existingFurniture.type !== 'door' && existingFurniture.type !== 'window') {
-                                console.warn(`Cannot place furniture, another furniture exists at ${key}`);
+                                console.warn(`Невозможно разместить мебель, другая мебель существует по адресу ${key}`);
                             } else {
                                 const newFurniture = {
                                     type: draggedSubType,
                                     color: selectedColor,
                                     rotation: phantomObjectRotation,
-                                    offsetX: 0, // Default to no offset
-                                    offsetZ: 0, // Default to no offset
+                                    offsetX: 0,
+                                    offsetZ: 0,
                                     isSnapped: false,
-                                    dimensions: phantomDimensions // Store dimensions with the furniture
+                                    dimensions: phantomDimensions
                                 };
                                 setFurniture((prev) => ({ ...prev, [key]: newFurniture }));
 
@@ -1420,10 +1447,12 @@ export default function Edit() {
                 case 'ceilingLamp': return <CeilingLamp color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
                 case 'spotlight': return <Spotlight color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
                 case 'rgbStrip': return <RgbStrip color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
+                case 'pottedPlant': return <PottedPlant color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
+                case 'tallPlant': return <TallPlant color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
                 case TOOL_TYPES.floor: return <FloorPhantom />;
                 case TOOL_TYPES.wall:
                     const potentialOpening = hoveredCell && furniture[getKey(hoveredCell.x, hoveredCell.z)] &&
-                        (furniture[getKey(hoveredCell.x, hoveredCell.z)].type === 'door' || // Corrected typo here
+                        (furniture[getKey(hoveredCell.x, hoveredCell.z)].type === 'door' ||
                             furniture[getKey(hoveredCell.x, hoveredCell.z)].type === 'window');
                     return <WallPhantom hasOpening={potentialOpening} />;
                 default: return null;
@@ -1480,7 +1509,6 @@ export default function Edit() {
                     }
 
                     if (furnitureData) {
-                        // Apply offset for snapping to wall
                         const positionX = x + (furnitureData.offsetX || 0);
                         const positionZ = z + (furnitureData.offsetZ || 0);
 
@@ -1511,17 +1539,9 @@ export default function Edit() {
                 <primitive object={gridHelper} position={[0, FLOOR_LEVEL + 0.01, 0]} />
 
                 {hoveredCell && !isDragging && (
-                    selectedTool !== TOOL_TYPES.paint ? (
-                        <mesh position={[hoveredCell.x, FLOOR_LEVEL + 0.02, hoveredCell.z]} material={hoverMaterial} castShadow receiveShadow>
-                            <boxGeometry args={[1, 0.01, 1]} />
-                        </mesh>
-                    ) : (
-                        (floorTiles[getKey(hoveredCell.x, hoveredCell.z)] || (furniture[getKey(hoveredCell.x, hoveredCell.z)] && (furniture[getKey(hoveredCell.x, hoveredCell.z)].type === 'door' || furniture[getKey(hoveredCell.x, hoveredCell.z)].type === 'window'))) && (
-                            <mesh position={[hoveredCell.x, FLOOR_LEVEL + 0.02, hoveredCell.z]} material={new MeshStandardMaterial({ color: selectedColor, transparent: true, opacity: 0.5 })} castShadow receiveShadow>
-                                <boxGeometry args={[1, 0.01, 1]} />
-                            </mesh>
-                        )
-                    )
+                    <mesh position={[hoveredCell.x, FLOOR_LEVEL + 0.02, hoveredCell.z]} material={hoverMaterial} castShadow receiveShadow>
+                        <boxGeometry args={[1, 0.01, 1]} />
+                    </mesh>
                 )}
                 {isDragging && draggedType && phantomObjectPosition && draggedType !== TOOL_TYPES.paint && (
                     <group position={[phantomObjectPosition.x, FLOOR_LEVEL, phantomObjectPosition.z]}>
@@ -1571,10 +1591,10 @@ export default function Edit() {
 
     const saveRoomState = useCallback(() => {
         if (isNaN(roomId)) {
-            console.error("Помилка збереження: Недійсний ID кімнати. Неможливо зберегти.");
+            console.error("Ошибка сохранения: Недействительный ID комнаты. Невозможно сохранить.");
             setModalContent({
-                title: 'Помилка збереження',
-                message: 'Недійсний ідентифікатор кімнати. Збереження неможливе.',
+                title: 'Ошибка сохранения',
+                message: 'Недействительный идентификатор комнаты. Сохранение невозможно.',
                 onConfirm: () => setShowModal(false),
                 isConfirm: false
             });
@@ -1590,16 +1610,16 @@ export default function Edit() {
                 try {
                     currentUser = JSON.parse(userJson);
                 } catch (e) {
-                    console.error("Помилка парсингу користувача з localStorage під час збереження, скидаємо дані користувача:", e);
+                    console.error("Ошибка парсинга пользователя из localStorage при сохранении, сбрасываем данные пользователя:", e);
                     currentUser = null;
                 }
             }
 
             if (!currentUser || !Array.isArray(currentUser.rooms)) {
-                console.error("Недійсні або відсутні дані користувача в localStorage. Збереження неможливе.");
+                console.error("Недействительные или отсутствующие данные пользователя в localStorage. Сохранение невозможно.");
                 setModalContent({
-                    title: 'Помилка збереження',
-                    message: 'Немає даних користувача для збереження кімнати. Увійдіть або зареєструйтесь.',
+                    title: 'Ошибка сохранения',
+                    message: 'Нет данных пользователя для сохранения комнаты. Войдите или зарегистрируйтесь.',
                     onConfirm: () => setShowModal(false),
                     isConfirm: false
                 });
@@ -1623,29 +1643,29 @@ export default function Edit() {
                     cameraQuaternion: targetCameraQuaternion.current.toArray(),
                 };
                 localStorage.setItem('user', JSON.stringify(currentUser));
-                console.log('Стан кімнати успішно збережено для ID:', roomId, currentUser.rooms[roomIndex]);
+                console.log('Состояние комнаты успешно сохранено для ID:', roomId, currentUser.rooms[roomIndex]);
                 setModalContent({
-                    title: 'Збережено',
-                    message: `Стан кімнати "${roomName}" успішно збережено!`,
+                    title: 'Сохранено',
+                    message: `Состояние комнаты "${roomName}" успешно сохранено!`,
                     onConfirm: () => { setShowModal(false); navigate('/'); },
                     isConfirm: false
                 });
                 setShowModal(true);
             } else {
-                console.warn(`Кімнату з ID ${roomId} не знайдено в списку кімнат користувача. Збереження не відбулось.`);
+                console.warn(`Комната с ID ${roomId} не найдена в списке комнат пользователя. Сохранение не произошло.`);
                 setModalContent({
-                    title: 'Помилка збереження',
-                    message: 'Кімнату з таким ID не знайдено для оновлення. Переконайтеся, що вона існує.',
+                    title: 'Ошибка сохранения',
+                    message: 'Комната с таким ID не найдена для обновления. Убедитесь, что она существует.',
                     onConfirm: () => setShowModal(false),
                     isConfirm: false
                 });
                 setShowModal(true);
             }
         } catch (error) {
-            console.error("Помилка збереження стану кімнати:", error);
+            console.error("Ошибка сохранения состояния комнаты:", error);
             setModalContent({
-                title: 'Помилка збереження',
-                message: 'Помилка при збереженні стану кімнати. Перевірте консоль для деталей.',
+                title: 'Ошибка сохранения',
+                message: 'Ошибка при сохранении состояния комнаты. Проверьте консоль для деталей.',
                 onConfirm: () => setShowModal(false),
                 isConfirm: false
             });
@@ -1656,10 +1676,10 @@ export default function Edit() {
     useEffect(() => {
         const loadRoomState = () => {
             if (isNaN(roomId)) {
-                console.error("Помилка завантаження: Недійсний ID кімнати. Перенаправлення на головну сторінку.");
+                console.error("Ошибка загрузки: Недействительный ID комнаты. Перенаправление на главную страницу.");
                 setModalContent({
-                    title: 'Помилка завантаження',
-                    message: 'Невірний ідентифікатор кімнати. Перенаправлення на головну сторінку.',
+                    title: 'Ошибка загрузки',
+                    message: 'Неверный идентификатор комнаты. Перенаправление на главную страницу.',
                     onConfirm: () => navigate('/'),
                     isConfirm: false
                 });
@@ -1675,13 +1695,13 @@ export default function Edit() {
                     try {
                         currentUser = JSON.parse(userJson);
                     } catch (e) {
-                        console.error("Помилка парсингу користувача з localStorage під час завантаження, скидаємо дані користувача:", e);
+                        console.error("Ошибка парсинга пользователя из localStorage при загрузке, сбрасываем данные пользователя:", e);
                         currentUser = null;
                     }
                 }
 
                 if (!currentUser || !Array.isArray(currentUser.rooms)) {
-                    console.warn("Недійсні або відсутні дані користувача в localStorage. Скидання стану.");
+                    console.warn("Недействительные или отсутствующие данные пользователя в localStorage. Сброс состояния.");
                     resetAllState();
                     return;
                 }
@@ -1689,8 +1709,8 @@ export default function Edit() {
                 const roomToLoad = currentUser.rooms.find(room => room.id === roomId);
 
                 if (roomToLoad) {
-                    console.log('Завантаження стану кімнати для ID:', roomId, roomToLoad);
-                    setRoomName(roomToLoad.name || `Кімната ${roomId}`);
+                    console.log('Загрузка состояния комнаты для ID:', roomId, roomToLoad);
+                    setRoomName(roomToLoad.name || `Комната ${roomId}`);
                     setGridSize(roomToLoad.gridSize || INITIAL_GRID_SIZE);
                     setWalls(roomToLoad.walls || {});
                     setFurniture(roomToLoad.furniture || {});
@@ -1708,10 +1728,10 @@ export default function Edit() {
                         targetCameraQuaternion.current.copy(tempCamera.quaternion);
                     }
                 } else {
-                    console.warn(`Кімнату з ID ${roomId} не знайдено в списку кімнат користувача. Ініціалізація нового стану кімнати.`);
+                    console.warn(`Комната с ID ${roomId} не найдена в списке комнат пользователя. Инициализация нового состояния комнаты.`);
                     setModalContent({
-                        title: 'Кімнату не знайдено',
-                        message: 'Кімнату не знайдено. Було ініціалізовано новий проєкт.',
+                        title: 'Комната не найдена',
+                        message: 'Комната не найдена. Был инициализирован новый проект.',
                         onConfirm: () => setShowModal(false),
                         isConfirm: false
                     });
@@ -1719,10 +1739,10 @@ export default function Edit() {
                     resetAllState();
                 }
             } catch (error) {
-                console.error("Помилка завантаження стану кімнати:", error);
+                console.error("Ошибка загрузки состояния комнаты:", error);
                 setModalContent({
-                    title: 'Помилка завантаження',
-                    message: 'Помилка при завантаженні стану кімнати. Перевірте консоль для деталей.',
+                    title: 'Ошибка загрузки',
+                    message: 'Ошибка при загрузке состояния комнаты. Проверьте консоль для деталей.',
                     onConfirm: () => setShowModal(false),
                     isConfirm: false
                 });
@@ -1741,8 +1761,8 @@ export default function Edit() {
 
     const deleteRoom = useCallback(() => {
         setModalContent({
-            title: 'Видалити кімнату',
-            message: `Ви впевнені, що хочете видалити кімнату "${roomName}"? Цю дію не можна скасувати.`,
+            title: 'Удалить комнату',
+            message: `Вы уверены, что хотите удалить комнату "${roomName}"? Это действие нельзя отменить.`,
             onConfirm: () => {
                 try {
                     const userJson = localStorage.getItem('user');
@@ -1752,10 +1772,10 @@ export default function Edit() {
                         try {
                             currentUser = JSON.parse(userJson);
                         } catch (e) {
-                            console.error("Помилка парсингу користувача з localStorage під час видалення кімнати:", e);
+                            console.error("Ошибка парсинга пользователя из localStorage при удалении комнаты:", e);
                             setModalContent({
-                                title: 'Помилка',
-                                message: 'Дані користувача пошкоджені. Видалення неможливе.',
+                                title: 'Ошибка',
+                                message: 'Данные пользователя повреждены. Удаление невозможно.',
                                 onConfirm: () => setShowModal(false),
                                 isConfirm: false
                             });
@@ -1765,10 +1785,10 @@ export default function Edit() {
                     }
 
                     if (!currentUser || !Array.isArray(currentUser.rooms)) {
-                        console.error("Недійсні або відсутні дані користувача в localStorage. Видалення неможливе.");
+                        console.error("Недействительные или отсутствующие данные пользователя в localStorage. Удаление невозможно.");
                         setModalContent({
-                            title: 'Помилка',
-                            message: 'Немає даних користувача. Видалення неможливе.',
+                            title: 'Ошибка',
+                            message: 'Нет данных пользователя. Удаление невозможно.',
                             onConfirm: () => setShowModal(false),
                             isConfirm: false
                         });
@@ -1783,28 +1803,28 @@ export default function Edit() {
                         currentUser.rooms = updatedRooms;
                         localStorage.setItem('user', JSON.stringify(currentUser));
                         setModalContent({
-                            title: 'Кімнату видалено',
-                            message: `Кімнату "${roomName}" успішно видалено.`,
+                            title: 'Комната удалена',
+                            message: `Комната "${roomName}" успешно удалена.`,
                             onConfirm: () => { setShowModal(false); navigate('/'); },
                             isConfirm: false
                         });
                         setShowModal(true);
-                        console.log(`Кімнату з ID ${roomId} успішно видалено.`);
+                        console.log(`Комната с ID ${roomId} успешно удалена.`);
                     } else {
                         setModalContent({
-                            title: 'Помилка видалення',
-                            message: 'Кімнату з таким ID не знайдено.',
+                            title: 'Ошибка удаления',
+                            message: 'Комната с таким ID не найдена.',
                             onConfirm: () => setShowModal(false),
                             isConfirm: false
                         });
                         setShowModal(true);
-                        console.warn(`Кімнату з ID ${roomId} не знайдено для видалення.`);
+                        console.warn(`Комната с ID ${roomId} не найдена для удаления.`);
                     }
                 } catch (error) {
-                    console.error("Помилка видалення кімнати:", error);
+                    console.error("Ошибка удаления комнаты:", error);
                     setModalContent({
-                        title: 'Помилка видалення',
-                        message: 'Помилка при видаленні кімнати. Перевірте консоль для деталей.',
+                        title: 'Ошибка удаления',
+                        message: 'Ошибка при удалении комнаты. Проверьте консоль для деталей.',
                         onConfirm: () => setShowModal(false),
                         isConfirm: false
                     });
@@ -1863,7 +1883,6 @@ export default function Edit() {
                 </Canvas>
                 {isMobile && (
                     <>
-                        {/* Mobile Movement Control Buttons */}
                         <div style={{
                             position: 'absolute',
                             bottom: '20px',
@@ -1874,7 +1893,6 @@ export default function Edit() {
                             gap: '5px',
                             zIndex: 1000,
                         }}>
-                            {/* Forward */}
                             <button
                                 onTouchStart={() => mobileMovementInput.current.forward = 1}
                                 onTouchEnd={() => mobileMovementInput.current.forward = 0}
@@ -1894,7 +1912,6 @@ export default function Edit() {
                             >
                                 ↑
                             </button>
-                            {/* Left */}
                             <button
                                 onTouchStart={() => mobileMovementInput.current.left = 1}
                                 onTouchEnd={() => mobileMovementInput.current.left = 0}
@@ -1914,7 +1931,6 @@ export default function Edit() {
                             >
                                 ←
                             </button>
-                            {/* Right */}
                             <button
                                 onTouchStart={() => mobileMovementInput.current.right = 1}
                                 onTouchEnd={() => mobileMovementInput.current.right = 0}
@@ -1934,7 +1950,6 @@ export default function Edit() {
                             >
                                 →
                             </button>
-                            {/* Backward */}
                             <button
                                 onTouchStart={() => mobileMovementInput.current.backward = 1}
                                 onTouchEnd={() => mobileMovementInput.current.backward = 0}
@@ -1956,7 +1971,6 @@ export default function Edit() {
                             </button>
                         </div>
 
-                        {/* Camera Rotation Control Buttons */}
                         <div style={{
                             position: 'absolute',
                             bottom: '20px',
@@ -1967,7 +1981,6 @@ export default function Edit() {
                             gap: '5px',
                             zIndex: 1000,
                         }}>
-                            {/* Pitch Up */}
                             <button
                                 onTouchStart={() => cameraRotationInput.current.pitch = 1}
                                 onTouchEnd={() => cameraRotationInput.current.pitch = 0}
@@ -1987,7 +2000,6 @@ export default function Edit() {
                             >
                                 ▲
                             </button>
-                            {/* Yaw Left */}
                             <button
                                 onTouchStart={() => cameraRotationInput.current.yaw = 1}
                                 onTouchEnd={() => cameraRotationInput.current.yaw = 0}
@@ -2007,7 +2019,6 @@ export default function Edit() {
                             >
                                 ◀
                             </button>
-                            {/* Yaw Right */}
                             <button
                                 onTouchStart={() => cameraRotationInput.current.yaw = -1}
                                 onTouchEnd={() => cameraRotationInput.current.yaw = 0}
@@ -2027,7 +2038,6 @@ export default function Edit() {
                             >
                                 ▶
                             </button>
-                            {/* Pitch Down */}
                             <button
                                 onTouchStart={() => cameraRotationInput.current.pitch = -1}
                                 onTouchEnd={() => cameraRotationInput.current.pitch = 0}
@@ -2048,7 +2058,6 @@ export default function Edit() {
                                 ▼
                             </button>
                         </div>
-                        {/* Vertical movement buttons */}
                         <div style={{
                             position: 'absolute',
                             bottom: '150px',
@@ -2075,7 +2084,7 @@ export default function Edit() {
                                     userSelect: 'none',
                                 }}
                             >
-                                Вгору
+                                Вверх
                             </button>
                             <button
                                 onTouchStart={() => cameraVerticalInput.current = -1}
@@ -2129,9 +2138,9 @@ export default function Edit() {
                     flexDirection: 'column',
                     gap: '8px',
                 }}>
-                    <h3 style={{ margin: '0 0 10px 0', color: '#2D9CDB', fontSize: '1.2em', fontWeight: '700' }}>Інструменти</h3>
+                    <h3 style={{ margin: '0 0 10px 0', color: '#2D9CDB', fontSize: '1.2em', fontWeight: '700' }}>Инструменты</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {Object.entries(TOOL_TYPES).filter(([, label]) => label !== 'Меблі').map(([key, label]) => (
+                        {Object.entries(TOOL_TYPES).filter(([, label]) => label !== 'Мебель').map(([key, label]) => (
                             <button
                                 key={label}
                                 onClick={() => {
@@ -2172,7 +2181,7 @@ export default function Edit() {
                     flexDirection: 'column',
                     gap: '8px',
                 }}>
-                    <h3 style={{ margin: '0 0 10px 0', color: '#2D9CDB', fontSize: '1.2em', fontWeight: '700' }}>Кольори</h3>
+                    <h3 style={{ margin: '0 0 10px 0', color: '#2D9CDB', fontSize: '1.2em', fontWeight: '700' }}>Цвета</h3>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
                         <input
                             type="color"
@@ -2225,7 +2234,7 @@ export default function Edit() {
                     overflowY: 'auto',
                     maxHeight: '230px',
                 }}>
-                    <h3 style={{ margin: '0 0 10px 0', color: '#2D9CDB', fontSize: '1.2em', fontWeight: '700' }}>Інвентар меблів</h3>
+                    <h3 style={{ margin: '0 0 10px 0', color: '#2D9CDB', fontSize: '1.2em', fontWeight: '700' }}>Инвентарь мебели</h3>
                     <div style={{ marginBottom: '15px' }}>
                         <h4 style={{
                             margin: '0 0 6px 0',
@@ -2234,12 +2243,12 @@ export default function Edit() {
                             fontWeight: '600',
                             borderBottom: '1px solid rgba(75, 85, 99, 0.5)',
                             paddingBottom: '4px',
-                        }}>Назва кімнати:</h4>
+                        }}>Название комнаты:</h4>
                         <input
                             type="text"
                             value={roomName}
                             onChange={(e) => setRoomName(e.target.value)}
-                            placeholder="Введіть назву кімнати"
+                            placeholder="Введите название комнаты"
                             style={{
                                 background: '#4B5563',
                                 color: '#E1E6F0',
@@ -2280,7 +2289,7 @@ export default function Edit() {
                                             transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.2s',
                                             boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                                         }}
-                                        title={`Перетягніть для розміщення: ${label}`}
+                                        title={`Перетащите для размещения: ${label}`}
                                     >
                                         {label}
                                     </div>
@@ -2317,7 +2326,7 @@ export default function Edit() {
                             boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
                         }}
                     >
-                        Зберегти
+                        Сохранить
                     </button>
                     <button
                         onClick={resetAllState}
@@ -2335,31 +2344,14 @@ export default function Edit() {
                             boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
                         }}
                     >
-                        Очистити все
+                        Очистить все
                     </button>
-                    {/*<button*/}
-                    {/*    onClick={deleteRoom}*/}
-                    {/*    style={{*/}
-                    {/*        padding: '10px 15px',*/}
-                    {/*        background: '#EF4444',*/}
-                    {/*        color: '#FFFFFF',*/}
-                    {/*        borderRadius: '8px',*/}
-                    {/*        border: 'none',*/}
-                    {/*        cursor: 'pointer',*/}
-                    {/*        width: '100%',*/}
-                    {/*        fontSize: '1em',*/}
-                    {/*        fontWeight: '600',*/}
-                    {/*        transition: 'background-color 0.3s ease, transform 0.2s, box-shadow 0.3s ease',*/}
-                    {/*    }}*/}
-                    {/*>*/}
-                    {/*    Видалити кімнату*/}
-                    {/*</button>*/}
 
                     <button
                         onClick={() => {
                             setModalContent({
-                                title: 'Вийти без збереження',
-                                message: 'Ваші зміни не збережено. Ви впевнені, що хочете вийти?',
+                                title: 'Выйти без сохранения',
+                                message: 'Ваши изменения не сохранены. Вы уверены, что хотите выйти?',
                                 onConfirm: () => { setShowModal(false); document.location.href = "/"; },
                                 isConfirm: true
                             });
@@ -2379,7 +2371,7 @@ export default function Edit() {
                             boxShadow: '0 4px 12px rgba(65, 65, 66, 0.3)',
                         }}
                     >
-                        Вийти без збереження
+                        Выйти без сохранения
                     </button>
                 </div>
             </div>
