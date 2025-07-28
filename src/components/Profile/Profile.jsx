@@ -109,7 +109,6 @@ const Profile = () => {
             )}
 
             <p className="profile__id" data-aos="fade-right" data-aos-delay="200">ID: {formData.id}</p>
-
             <h2 className="profile__title" data-aos="fade-left" data-aos-delay="250">@{formData.username}</h2>
 
             <div className="profile__inputs" data-aos="fade-up" data-aos-delay="300">
@@ -162,25 +161,15 @@ const Profile = () => {
           </div>
 
           <div className="profile__buttons">
-            {!editable && (
+            {!editable ? (
                 <>
-                  <button className="profile__change" onClick={handleEdit}>
-                    Змінити
-                  </button>
-                  <button className="profile__delete" onClick={handleDelete}>
-                    Видалити
-                  </button>
+                  <button className="profile__change" onClick={handleEdit}>Змінити</button>
+                  <button className="profile__delete" onClick={handleDelete}>Видалити</button>
                 </>
-            )}
-
-            {editable && (
+            ) : (
                 <>
-                  <button className="profile__apply" onClick={handleApply}>
-                    Застосувати
-                  </button>
-                  <button className="profile__reset" onClick={handleReset}>
-                    Скинути
-                  </button>
+                  <button className="profile__apply" onClick={handleApply}>Застосувати</button>
+                  <button className="profile__reset" onClick={handleReset}>Скинути</button>
                 </>
             )}
           </div>
