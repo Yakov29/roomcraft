@@ -3,7 +3,9 @@ import Container from "../Container/Container";
 import "./Hero.css";
 import { FaArrowDown } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
-import Logo from "../../logo.png"
+import Logo from "../../logo.png";
+import AOS from "aos";
+import "aos/dist/aos.css";
 
 const phrases = [
     "RoomCraft — Створи простір, що надихає ✨",
@@ -26,6 +28,12 @@ const Hero = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
+        AOS.init({
+            duration: 700,
+            easing: "ease-in-out",
+            once: true,
+        });
+
         const userData = localStorage.getItem("user");
         if (userData) {
             const user = JSON.parse(userData);
@@ -74,14 +82,14 @@ const Hero = () => {
     };
 
     return (
-        <section className="hero">
+        <section className="hero" data-aos="fade-up">
             <Container>
-                <div className="hero__content">
+                <div className="hero__content" data-aos="fade-right" data-aos-delay="100">
                     <h1 className="hero__title">
                         {text}
                         <span className="cursor"></span>
                     </h1>
-                    <p className="hero__description">
+                    <p className="hero__description" data-aos="fade-left" data-aos-delay="300">
                         RoomCraft — це твій персональний конструктор кімнати. Плануй, експериментуй і створюй ідеальний простір прямо у браузері.
                     </p>
 
@@ -89,20 +97,26 @@ const Hero = () => {
                         className="hero__button"
                         onClick={handleButtonClick}
                         disabled={!hasUser}
+                        data-aos="zoom-in"
+                        data-aos-delay="500"
                     >
                         {hasUser ? "Відкрити редактор" : "Почати створення"}
                     </button>
 
-                    <p className="hero__subtext">Більше 10 000 користувачів вже створили свої віртуальні кімнати ✨</p>
+                    <p className="hero__subtext" data-aos="fade-up" data-aos-delay="600">
+                        Більше 10 000 користувачів вже створили свої віртуальні кімнати ✨
+                    </p>
                 </div>
-                <div className="hero__preview">
+                <div className="hero__preview" data-aos="zoom-in" data-aos-delay="400">
                     <img
                         src={Logo}
                         alt="Room Preview"
                     />
                 </div>
             </Container>
-            <button className="hero__arrow"><FaArrowDown/></button>
+            <button className="hero__arrow">
+                <FaArrowDown />
+            </button>
         </section>
     );
 };

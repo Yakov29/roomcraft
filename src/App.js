@@ -11,6 +11,7 @@ import User from "./pages/User/User";
 import Rooms from "./pages/Rooms/Rooms";
 import Create from "./pages/Create/Create";
 import Edit from "./pages/Edit/Edit";
+import ToHome from "./components/ToHome/ToHome";
 
 function App() {
   const location = useLocation();
@@ -40,6 +41,7 @@ function App() {
   return (
     <div className="App">
       {showHeader && <Header />}
+      {/* <ToHome/> */}
       <Routes>
         <Route path="/" element={<Homepage />} />
         <Route path="/get-started" element={<GetStarted />} />

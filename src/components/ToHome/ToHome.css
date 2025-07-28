@@ -1,0 +1,39 @@
+.tohome {
+  position: fixed;
+  top: 100px;
+  left: 15px;
+  z-index: 10000;
+  background-color: #2D9CDB;
+  color: #E1E6F0;
+  padding: 12px 22px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(45, 156, 219, 0.4);
+  transition: background-color 0.3s ease, transform 0.15s ease, box-shadow 0.3s ease;
+}
+
+.tohome:hover {
+  background-color: #1a7ac9;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 15px rgba(26, 122, 201, 0.6);
+}
+
+@media (max-width: 768px) {
+  .tohome {
+    top: 80px;
+    padding: 10px 20px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tohome {
+    top: 70px;
+    left: 10px;
+    padding: 9px 18px;
+    font-size: 14px;
+  }
+}

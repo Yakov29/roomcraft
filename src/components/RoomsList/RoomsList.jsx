@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Container from "../Container/Container";
+import AOS from "aos";
+import "aos/dist/aos.css";
 import "./RoomsList.css";
 
 const RoomsList = () => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   const [rooms, setRooms] = useState([]);
+
+  useEffect(() => {
+    AOS.init({ duration: 800, once: true });
+  }, []);
 
   useEffect(() => {
     const user = localStorage.getItem("user");
@@ -19,15 +25,15 @@ const RoomsList = () => {
 
   const handleDelete = (id) => {
     if (!userData) return;
+    if (!window.confirm("Ви дійсно хочете видалити цю кімнату?")) return;
     const updatedRooms = rooms.filter((room) => room.id !== id);
     const updatedUser = { ...userData, rooms: updatedRooms };
     localStorage.setItem("user", JSON.stringify(updatedUser));
     setRooms(updatedRooms);
     setUserData(updatedUser);
-    window.location.reload();
   };
 
-  const handleClick = (id) => {
+  const handleEdit = (id) => {
     navigate(`/edit/${id}`);
   };
 
@@ -78,31 +84,56 @@ const RoomsList = () => {
   return (
     <section className="rooms-list">
       <Container>
-        <h2 className="rooms__title">Кімнати користувача</h2>
+        <h2 className="rooms__title" data-aos="fade-down">Кімнати користувача</h2>
         {rooms.length === 0 ? (
-          <p className="rooms__none">У вас ще немає кімнат. Створіть нову!</p>
+          <p className="rooms__none" data-aos="fade-up">У вас ще немає кімнат. Створіть нову!</p>
         ) : (
           <ul className="rooms__list">
-            {rooms.map((room) => (
-              <li key={room.id} className="rooms__item">
-                <div onClick={() => handleClick(room.id)} style={{ cursor: "pointer" }}>
+            {rooms.map((room, index) => (
+              <li
+                key={room.id}
+                className="rooms__item"
+                data-aos="fade-up"
+                data-aos-delay={index * 100}
+              >
+                <div onClick={() => handleEdit(room.id)} style={{ cursor: "pointer" }}>
                   <h4 className="rooms__name">{room.name}</h4>
                   <p className="rooms__date">Створено: {room.createdAt}</p>
                 </div>
-                <button
-                  className="rooms__action-button rooms__action-button--download"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDownload(room);
-                  }}
-                >
-                  Експортувати
-                </button>
+                <div className="rooms__buttons">
+                  <button
+                    className="rooms__action-button rooms__action-button--edit"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(room.id);
+                    }}
+                  >
+                    Редагувати
+                  </button>
+                  <button
+                    className="rooms__action-button rooms__action-button--delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(room.id);
+                    }}
+                  >
+                    Видалити
+                  </button>
+                  <button
+                    className="rooms__action-button rooms__action-button--download"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(room);
+                    }}
+                  >
+                    Експортувати
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
         )}
-        <div className="rooms__actions">
+        <div className="rooms__actions" data-aos="fade-up" data-aos-delay={rooms.length * 100}>
           <button className="rooms__button" onClick={() => navigate("/create")}>
             Створити нову
           </button>

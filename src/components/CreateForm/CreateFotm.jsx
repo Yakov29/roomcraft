@@ -17,7 +17,7 @@ const CreateForm = () => {
     const newRoom = {
       id: Date.now(),
       name: roomName,
-    //   type: roomType,
+      type: roomType,
       createdAt: new Date().toISOString().slice(0, 10),
     };
 
@@ -41,26 +41,11 @@ const CreateForm = () => {
               <input
                 className="createform__input"
                 type="text"
-                placeholder={`Кімната ${user?.name || ""}`}
+                placeholder={`Введіть назву кімнати`}
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
               />
             </li>
-            {/* <li className="createform__item">
-              <p className="createform__name">Тип кімнати</p>
-              <div className="createform__selects">
-                {["Спальна", "Кухня", "Вітальня", "Сад"].map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={`createform__select ${roomType === type ? "active" : ""}`}
-                    onClick={() => setRoomType(type)}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </li> */}
           </ul>
           <p className="createform__warn">
             Зверніть увагу: редактор працює на технології WebGL — переконайтеся, що ваш пристрій її підтримує.

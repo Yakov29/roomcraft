@@ -4,7 +4,7 @@ header {
     background: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     position: fixed;
-     backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     top: 0;
     left: 0;
@@ -16,14 +16,14 @@ header .container {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    padding: 0 20px;
+    position: relative;
 }
 
 .header__home {
-    color: #E1E6F0;
-    font-size: 48px;
-    font-weight: 700;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+
+
     transition: transform 0.3s ease;
     width: 50px;
     border-radius: 10px;
@@ -37,6 +37,9 @@ header .container {
     display: flex;
     gap: 40px;
     align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
 .header__link {
@@ -46,6 +49,7 @@ header .container {
     font-weight: 500;
     position: relative;
     transition: color 0.3s;
+    white-space: nowrap;
 }
 
 .header__link::after {
@@ -68,12 +72,9 @@ header .container {
 }
 
 .header__start {
-    padding-top: 15px;
-    padding-bottom: 15px;
+    padding: 15px 20px;
     margin-left: 30px;
     background-color: #1B74E4;
-    padding-left: 20px;
-    padding-right: 20px;
     color: #E1E6F0;
     border-radius: 8px;
     font-weight: 600;
@@ -82,6 +83,9 @@ header .container {
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(27, 116, 228, 0.3);
     transition: background-color 0.3s, transform 0.2s;
+    white-space: nowrap;
+    text-align: center;
+    margin-left: 0;
 }
 
 .header__start:hover {
@@ -95,8 +99,111 @@ header .container {
     border-radius: 50%;
     object-fit: cover;
     transition: transform 0.2s ease;
+    margin-left: 20px;
 }
 
 .header__avatar:hover {
     transform: scale(1.05);
+}
+
+.header__burger {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 24px;
+    height: 18px;
+    cursor: pointer;
+    margin-left: 15px;
+}
+
+.header__burger span {
+    display: block;
+    height: 3px;
+    background: #E1E6F0;
+    border-radius: 2px;
+}
+
+.header__item--mobile {
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.header__avatar--desktop {
+    display: block;
+}
+
+.header__start--desktop {
+    display: inline-block;
+}
+
+
+
+@media (max-width: 768px) {
+    header .container {
+        justify-content: space-between;
+        flex-direction: row;
+        padding: 15px 20px;
+    }
+
+    .header__list {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        background-color: rgba(20, 20, 30, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 20px;
+        gap: 20px;
+        display: none;
+        z-index: 999;
+    }
+
+    .header__list.active {
+        display: flex;
+    }
+
+    .header__item--mobile {
+        display: flex;
+    }
+
+    .header__avatar--desktop,
+    .header__start--desktop {
+        display: none;
+
+    }
+
+    .header__home {
+        width: 38px;
+    }
+
+    .header__avatar {
+        margin-left: 0;
+        margin-top: 0;
+    }
+
+    .header__burger {
+        display: flex;
+    }
+}
+
+@media (max-width: 480px) {
+    header {
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    header .container {
+        padding: 0 15px;
+    }
+
+    .header__home {
+        width: 32px;
+    }
+
+    .header__avatar {
+        width: 38px;
+        height: 38px;
+    }
 }
