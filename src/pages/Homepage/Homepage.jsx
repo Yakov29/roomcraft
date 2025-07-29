@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import Hero from "../../components/Hero/Hero";
 import About from "../../components/About/About";
 import Footer from "../../components/Footer/Footer";
+import Developer from "../../components/Developer/Developer";
 
 const Homepage = () => {
     useEffect(() => { document.title = "RoomCraft | Головна" })
@@ -9,6 +10,7 @@ const Homepage = () => {
         <main>
             <Hero />
             <About/>
+            <Developer/>
             <Footer/>
         </main>
     )

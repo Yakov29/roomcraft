@@ -1,0 +1,40 @@
+.developer{
+    background-color: #121827;
+    padding-top: 80px;
+    padding-bottom: 80px;
+    text-align: center;
+}
+
+.developer__title{
+    color: #E1E6F0;
+    font-size: 32px;
+    margin-bottom: 50px;
+}
+
+.developer__image{
+    border-radius: 50%;
+    display: flex;
+    margin-left: auto;
+    margin-right: auto;
+    width: 150px;
+    height: 150px;
+    margin-bottom: 20px;
+
+}
+
+.developer__description {
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    color: #a0aec0;
+    font-size: 18px;
+    line-height: 1.6;
+    padding: 20px 30px;
+    border-radius: 16px;
+}
+
+
+.developer__description strong {
+    color: #e2e8f0;
+    font-weight: 600;
+}
