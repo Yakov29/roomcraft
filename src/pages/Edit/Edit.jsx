@@ -5,7 +5,6 @@ import { GridHelper, Vector3, MeshStandardMaterial, Raycaster, Plane, Euler, Qua
 import * as THREE from 'three';
 import { useParams, useNavigate } from 'react-router-dom';
 
-// CSS Variables (moved here for consistency with the example)
 const styles = {
     root: {
         '--background-color': '#121924',
@@ -15,14 +14,13 @@ const styles = {
         '--text-color-light': '#E1E6F0',
         '--text-color-muted': '#A0AEC0',
     },
-    // Styles for the tutorial and inventory elements
     tutorialModal: {
         position: 'fixed',
         top: 0,
         left: 0,
         width: '100vw',
         height: '100vh',
-        backgroundColor: 'rgba(0,0,0,0.7)', // Darker overlay for tutorial
+        backgroundColor: 'rgba(0,0,0,0.7)',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -57,7 +55,6 @@ const styles = {
         justifyContent: 'space-between',
         marginTop: '20px',
     },
-    // Base button style
     buttonBase: {
         padding: '15px 40px',
         color: '#FFFFFF',
@@ -68,7 +65,6 @@ const styles = {
         fontSize: '1.1em',
         transition: 'background-color 0.3s ease, transform 0.2s, box-shadow 0.3s ease',
     },
-    // Specific tutorial button styles
     tutorialSkipButton: {
         backgroundColor: '#DC2626',
         boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
@@ -86,7 +82,7 @@ const styles = {
         transform: 'translateY(-2px)',
     },
     inventoryPanel: {
-        background: 'rgba(31, 41, 55, 0.4)', // Made more transparent
+        background: 'rgba(31, 41, 55, 0.4)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
         color: 'var(--text-color-light)',
@@ -102,7 +98,7 @@ const styles = {
         borderRadius: '15px 15px 0 0',
         position: 'relative',
         zIndex: 999,
-        transition: 'transform 0.3s ease-out', // Smooth transition for showing/hiding
+        transition: 'transform 0.3s ease-out',
     },
     inventorySection: {
         background: 'var(--primary-darker)',
@@ -129,7 +125,6 @@ const styles = {
         borderBottom: '1px solid rgba(75, 85, 99, 0.5)',
         paddingBottom: '4px',
     },
-    // Inventory button specific styles
     toolButtonActive: {
         backgroundColor: 'var(--accent)',
         boxShadow: '0 4px 12px rgba(45, 156, 219, 0.3)',
@@ -230,7 +225,6 @@ const styles = {
     }
 };
 
-// Helper component for buttons with hover effects
 const HoverButton = ({ children, style, hoverStyle, onClick }) => {
     const [isHovered, setIsHovered] = useState(false);
 
@@ -251,7 +245,6 @@ const HoverButton = ({ children, style, hoverStyle, onClick }) => {
     );
 };
 
-// Helper component for divs with hover effects (like furniture items)
 const HoverDiv = ({ children, style, hoverStyle, onMouseDown, title }) => {
     const [isHovered, setIsHovered] = useState(false);
 
@@ -920,35 +913,81 @@ const KitchenTable = React.memo(({ color, rotation, isHighlighted, isPhantom }) 
     </group>
 ));
 
-const Toilet = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
-    <group rotation={[0, rotation, 0]}>
-        <mesh position={[0, 0.2, 0.1]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
-            <boxGeometry args={[0.4, 0.4, 0.6]} />
-        </mesh>
-        <mesh position={[0, 0.5, -0.2]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
-            <boxGeometry args={[0.4, 0.2, 0.2]} />
-        </mesh>
-        <mesh position={[0, 0.6, -0.3]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
-            <boxGeometry args={[0.4, 0.4, 0.1]} />
-        </mesh>
-        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
-    </group>
-));
+const Toilet = React.memo(({ color = "#ffffff", rotation = 0, isHighlighted, isPhantom }) => {
+    const material = isPhantom
+        ? phantomMaterial
+        : new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0 });
 
-const Sink = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
-    <group rotation={[0, rotation, 0]}>
-        <mesh position={[0, 0.75, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
-            <boxGeometry args={[0.6, 0.05, 0.5]} />
-        </mesh>
-        <mesh position={[0, 0.5, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
-            <boxGeometry args={[0.5, 0.7, 0.4]} />
-        </mesh>
-        <mesh position={[0, 0.7, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#ADD8E6", transparent: true, opacity: 0.7 })}>
-            <cylinderGeometry args={[0.15, 0.15, 0.1, 32]} />
-        </mesh>
-        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
-    </group>
-));
+    return (
+        <group rotation={[0, rotation, 0]}>
+            <mesh position={[0, 0.25, 0]} material={material}>
+                <cylinderGeometry args={[0.3, 0.3, 0.5, 32]} />
+            </mesh>
+
+            <mesh position={[0, 0.65, 0]} rotation={[-0.1, 0, 0]} material={material}>
+                <cylinderGeometry args={[0.35, 0.35, 0.1, 32]} />
+            </mesh>
+
+            <mesh position={[0, 0.9, -0.3]} material={material}>
+                <boxGeometry args={[0.5, 0.4, 0.15]} />
+            </mesh>
+
+            <mesh position={[0, 1.1, -0.3]} material={material}>
+                <boxGeometry args={[0.5, 0.05, 0.15]} />
+            </mesh>
+
+
+
+            {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+        </group>
+    );
+});
+
+
+const Sink = React.memo(({ color = "#ffffff", rotation = 0, isHighlighted, isPhantom }) => {
+    const sinkMaterial = isPhantom
+        ? phantomMaterial
+        : new THREE.MeshStandardMaterial({
+            color,
+            roughness: 0.3,
+            metalness: 0,
+        });
+
+    const innerMaterial = isPhantom
+        ? phantomMaterial
+        : new THREE.MeshStandardMaterial({
+            color: "#e6f0f7",
+            roughness: 0.2,
+            metalness: 0,
+            transparent: true,
+            opacity: 0.85,
+        });
+
+    const faucetMaterial = isPhantom
+        ? phantomMaterial
+        : new THREE.MeshStandardMaterial({ color: "#888888", metalness: 1, roughness: 0.25 });
+
+    return (
+        <group rotation={[0, rotation, 0]}>
+            <mesh position={[0, 0.4, 0]} material={sinkMaterial}>
+                <boxGeometry args={[0.7, 0.35, 0.5]} />
+            </mesh>
+            <mesh position={[0, 0.45, 0]} material={innerMaterial}>
+                <boxGeometry args={[0.55, 0.15, 0.35]} />
+            </mesh>
+            <group position={[0.2, 0.65, 0]}>
+                <mesh material={faucetMaterial}>
+                    <cylinderGeometry args={[0.05, 0.05, 0.25, 32]} />
+                </mesh>
+                <mesh position={[0, 0.125, 0.1]} rotation={[-Math.PI / 2, 0, 0]} material={faucetMaterial}>
+                    <torusGeometry args={[0.07, 0.02, 16, 100, Math.PI * 0.8]} />
+                </mesh>
+            </group>
+            {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+        </group>
+    );
+});
+
 
 const Bathtub = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
     <group rotation={[0, rotation, 0]}>
@@ -1038,7 +1077,7 @@ const FilingCabinet = React.memo(({ color, rotation, isHighlighted, isPhantom })
 const Painting = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
     const paintingMaterial = isPhantom
         ? phantomMaterial
-        : new MeshStandardMaterial({ color: new THREE.Color(color) }); // Use color as tint
+        : new MeshStandardMaterial({ color: new THREE.Color(color) });
 
     return (
         <group rotation={[0, rotation, 0]}>
@@ -1080,7 +1119,6 @@ const Door = React.memo(({ color = '#5A2D0C', rotation = 0, isHighlighted, isPha
 
     return (
         <group rotation={[0, rotation, 0]}>
-            {/* Основное дверное полотно */}
             <mesh position={[0, WALL_HEIGHT / 2, 0]} material={doorMaterial}>
                 <boxGeometry args={[0.85, WALL_HEIGHT - 0.2, 0.05]} />
             </mesh>
@@ -1136,22 +1174,18 @@ const Window = React.memo(({ color, rotation, isHighlighted, isPhantom, neighbor
 
     return (
         <group rotation={[0, rotation, 0]}>
-            {/* Main glass pane */}
             <mesh position={[0, WALL_HEIGHT / 2, 0]} material={isPhantom ? phantomMaterial : material}>
                 <boxGeometry args={[windowWidth, WALL_HEIGHT, 0.01]} />
             </mesh>
 
-            {/* Top Frame */}
             <mesh position={[0, WALL_HEIGHT - frameThickness / 2, 0]} material={isPhantom ? phantomMaterial : frameMaterial}>
                 <boxGeometry args={[windowWidth + frameThickness, frameThickness, frameThickness]} />
             </mesh>
 
-            {/* Bottom Frame */}
             <mesh position={[0, frameThickness / 2, 0]} material={isPhantom ? phantomMaterial : frameMaterial}>
                 <boxGeometry args={[windowWidth + frameThickness, frameThickness, frameThickness]} />
             </mesh>
 
-            {/* Side Frames (conditional rendering for snapping) */}
             {!(rotation === 0 && neighborLeft) && !(rotation === Math.PI && neighborRight) && !(rotation === Math.PI / 2 && neighborFront) && !(rotation === 3 * Math.PI / 2 && neighborBack) && (
                 <mesh position={[-(windowWidth / 2 + frameThickness / 2), WALL_HEIGHT / 2, 0]} material={isPhantom ? phantomMaterial : frameMaterial}>
                     <boxGeometry args={[frameThickness, WALL_HEIGHT, frameThickness]} />
@@ -1208,7 +1242,6 @@ const TV = React.memo(({ color = '#8B5E3C', rotation = 0, isHighlighted, isPhant
                 <boxGeometry args={[0.5, 0.025, 0.3]} />
             </mesh>
 
-            {/* Ножки подставки */}
             {[-0.18, 0.18].map((x) => (
                 <mesh key={x} position={[x, 0.35, 0.1]} material={standMaterial}>
                     <boxGeometry args={[0.1, 0.15, 0.05]} />
@@ -1372,7 +1405,6 @@ const PottedPlant = React.memo(({ color = "#2E8B57", rotation = 0, isHighlighted
             metalness: 0,
         }), [color]);
 
-    // Функция для создания двойных листьев — две плоскости, одна зеркально повернута
     const Leaf = ({ position, rotation }) => (
         <>
             <mesh position={position} rotation={rotation} material={isPhantom ? phantomMaterial : leafMaterial}>
@@ -1390,7 +1422,6 @@ const PottedPlant = React.memo(({ color = "#2E8B57", rotation = 0, isHighlighted
 
     return (
         <group rotation={[0, rotation, 0]} position={[0, 0, 0]}>
-            {/* Горшок - цилиндр с отверстием */}
             <mesh position={[0, 0.15, 0]} material={isPhantom ? phantomMaterial : potMaterial}>
                 <cylinderGeometry args={[0.2, 0.25, 0.3, 32, 1, true]} />
             </mesh>
@@ -1398,12 +1429,10 @@ const PottedPlant = React.memo(({ color = "#2E8B57", rotation = 0, isHighlighted
                 <circleGeometry args={[0.2, 32]} />
             </mesh>
 
-            {/* Стебель */}
             <mesh position={[0, 0.5, 0]} material={isPhantom ? phantomMaterial : plantMaterial}>
                 <cylinderGeometry args={[0.04, 0.05, 0.4, 12]} />
             </mesh>
 
-            {/* Листья — двойные плоскости */}
             <Leaf position={[0.1, 0.75, 0]} rotation={[0, 0, Math.PI / 6]} />
             <Leaf position={[-0.1, 0.7, 0.05]} rotation={[0, Math.PI / 8, -Math.PI / 4]} />
             <Leaf position={[0.05, 0.85, -0.1]} rotation={[Math.PI / 6, 0, Math.PI / 5]} />
@@ -1436,7 +1465,6 @@ const TallPlant = React.memo(({ color = "#3CB371", rotation = 0, isHighlighted, 
             metalness: 0
         }), [color]);
 
-    // Компонент двойного листа, два плейна спина к спине
     const Leaf = ({ position, rotation, size }) => (
         <>
             <mesh position={position} rotation={rotation} material={isPhantom ? phantomMaterial : leafMaterial}>
@@ -1454,17 +1482,14 @@ const TallPlant = React.memo(({ color = "#3CB371", rotation = 0, isHighlighted, 
 
     return (
         <group rotation={[0, rotation, 0]}>
-            {/* Горшок */}
             <mesh position={[0, 0.1, 0]} material={isPhantom ? phantomMaterial : potMaterial}>
                 <cylinderGeometry args={[0.2, 0.25, 0.2, 16]} />
             </mesh>
 
-            {/* Стебель */}
             <mesh position={[0, 0.7, 0]} material={isPhantom ? phantomMaterial : stemMaterial}>
                 <cylinderGeometry args={[0.03, 0.03, 1.2, 8]} />
             </mesh>
 
-            {/* Листья — плоскости двойные */}
             <Leaf position={[0.2, 1.2, 0]} rotation={[0, 0, Math.PI / 4]} size={[0.1, 0.6]} />
             <Leaf position={[-0.1, 1.0, 0.1]} rotation={[0, 0, -Math.PI / 6]} size={[0.1, 0.5]} />
             <Leaf position={[0, 0.9, -0.2]} rotation={[Math.PI / 6, 0, 0]} size={[0.4, 0.1]} />
@@ -1665,7 +1690,7 @@ export default function Edit() {
     const [draggedSubType, setDraggedSubType] = useState(null);
     const [phantomObjectPosition, setPhantomObjectPosition] = useState(null);
     const [phantomObjectRotation, setPhantomObjectRotation] = useState(0);
-    const [originalDraggedItemKey, setOriginalDraggedItemKey] = useState(null); // New state for dragging existing items
+    const [originalDraggedItemKey, setOriginalDraggedItemKey] = useState(null);
 
 
     const canvasRef = useRef();
@@ -1720,7 +1745,7 @@ export default function Edit() {
         setPhantomObjectRotation(0);
         setUserColors([]);
         setSelectedColor(BASE_COLORS[0]);
-        setOriginalDraggedItemKey(null); // Reset for dragging existing items
+        setOriginalDraggedItemKey(null);
 
         targetCameraPosition.current.set(...INITIAL_CAMERA_POSITION);
         const tempCamera = new THREE.Camera();
@@ -1738,20 +1763,18 @@ export default function Edit() {
         }
     }, [gridSize]);
 
-    // Function to check and update neighboring windows for snapping
     const updateNeighboringWindows = useCallback((x, z, currentFurnitureState) => {
         const updatedFurniture = { ...currentFurnitureState };
         const neighbors = [
-            { dx: -1, dz: 0, side: 'left' }, // Neighbor to the left of current
-            { dx: 1, dz: 0, side: 'right' },   // Neighbor to the right of current
-            { dx: 0, dz: -1, side: 'front' },  // Neighbor in front of current
-            { dx: 0, dz: 1, side: 'back' },  // Neighbor behind current
+            { dx: -1, dz: 0, side: 'left' },
+            { dx: 1, dz: 0, side: 'right' },
+            { dx: 0, dz: -1, side: 'front' },
+            { dx: 0, dz: 1, side: 'back' },
         ];
 
         const currentKey = getKey(x, z);
         const currentRotation = updatedFurniture[currentKey]?.rotation || 0;
 
-        // Reset all neighbor flags for the current window before re-evaluating
         updatedFurniture[currentKey] = {
             ...updatedFurniture[currentKey],
             neighborLeft: false,
@@ -1768,20 +1791,19 @@ export default function Edit() {
             if (updatedFurniture[neighborKey] && updatedFurniture[neighborKey].type === 'window') {
                 const neighborRotation = updatedFurniture[neighborKey].rotation || 0;
 
-                // Logic to determine which sides connect based on rotations
-                if (currentRotation === 0 || currentRotation === Math.PI) { // Window aligned with X-axis (width along X, depth along Z)
-                    if (n.dx === -1 && (neighborRotation === 0 || neighborRotation === Math.PI)) { // Left neighbor, also X-aligned
+                if (currentRotation === 0 || currentRotation === Math.PI) {
+                    if (n.dx === -1 && (neighborRotation === 0 || neighborRotation === Math.PI)) {
                         updatedFurniture[currentKey].neighborLeft = true;
                         updatedFurniture[neighborKey].neighborRight = true;
-                    } else if (n.dx === 1 && (neighborRotation === 0 || neighborRotation === Math.PI)) { // Right neighbor, also X-aligned
+                    } else if (n.dx === 1 && (neighborRotation === 0 || neighborRotation === Math.PI)) {
                         updatedFurniture[currentKey].neighborRight = true;
                         updatedFurniture[neighborKey].neighborLeft = true;
                     }
-                } else if (currentRotation === Math.PI / 2 || currentRotation === 3 * Math.PI / 2) { // Window aligned with Z-axis (width along Z, depth along X)
-                    if (n.dz === -1 && (neighborRotation === Math.PI / 2 || neighborRotation === 3 * Math.PI / 2)) { // Front neighbor, also Z-aligned
+                } else if (currentRotation === Math.PI / 2 || currentRotation === 3 * Math.PI / 2) {
+                    if (n.dz === -1 && (neighborRotation === Math.PI / 2 || neighborRotation === 3 * Math.PI / 2)) {
                         updatedFurniture[currentKey].neighborFront = true;
                         updatedFurniture[neighborKey].neighborBack = true;
-                    } else if (n.dz === 1 && (neighborRotation === Math.PI / 2 || neighborRotation === 3 * Math.PI / 2)) { // Back neighbor, also Z-aligned
+                    } else if (n.dz === 1 && (neighborRotation === Math.PI / 2 || neighborRotation === 3 * Math.PI / 2)) {
                         updatedFurniture[currentKey].neighborBack = true;
                         updatedFurniture[neighborKey].neighborFront = true;
                     }
@@ -1832,9 +1854,7 @@ export default function Edit() {
                     };
 
                     if (currentFurniture.type === 'window') {
-                        // Re-evaluate neighbors for the rotated window and its previous/new neighbors
                         updated = updateNeighboringWindows(hoveredCell.x, hoveredCell.z, updated);
-                        // Also update its neighbors
                         const neighborsToRecheck = [
                             getKey(hoveredCell.x - 1, hoveredCell.z),
                             getKey(hoveredCell.x + 1, hoveredCell.z),
@@ -1925,7 +1945,6 @@ export default function Edit() {
                 const copy = { ...prev };
                 delete copy[key];
 
-                // If deleted item was a window, update its neighbors
                 if (removedFurnitureType === 'window') {
                     const neighborsToRecheck = [
                         getKey(x - 1, z), getKey(x + 1, z),
@@ -1933,11 +1952,10 @@ export default function Edit() {
                     ];
                     neighborsToRecheck.forEach(nKey => {
                         if (copy[nKey] && copy[nKey].type === 'window') {
-                            // Temporarily add the deleted window back to check its impact on neighbors, then remove
                             const tempUpdatedFurniture = { ...copy, [key]: { type: 'window', rotation: furniture[key].rotation } };
                             const rechecked = updateNeighboringWindows(parseInt(nKey.split(',')[0]), parseInt(nKey.split(',')[1]), tempUpdatedFurniture);
-                            Object.assign(copy, rechecked); // Merge changes back
-                            delete copy[key]; // Ensure it's removed
+                            Object.assign(copy, rechecked);
+                            delete copy[key];
                         }
                     });
                 }
@@ -2012,8 +2030,8 @@ export default function Edit() {
                                cameraRotationInput,
                                cameraVerticalInput,
                                updateNeighboringWindows,
-                               setOriginalDraggedItemKey, // Pass this down
-                               originalDraggedItemKey // Pass this down
+                               setOriginalDraggedItemKey,
+                               originalDraggedItemKey
                            }) {
         const { gl, camera } = useThree();
         const PI_2 = Math.PI / 2;
@@ -2168,7 +2186,7 @@ export default function Edit() {
                 setDraggedType(selectedTool);
                 setDraggedSubType(null);
                 setPhantomObjectRotation(0);
-                setOriginalDraggedItemKey(null); // Not dragging an existing furniture item
+                setOriginalDraggedItemKey(null);
 
                 if (selectedTool === TOOL_TYPES.paint && hoveredCell) {
                     const key = getKey(hoveredCell.x, hoveredCell.z);
@@ -2187,16 +2205,14 @@ export default function Edit() {
                 domEvent.stopPropagation();
                 return;
             } else if (furniture[clickedKey] && (furniture[clickedKey].type !== 'door' && furniture[clickedKey].type !== 'window')) {
-                // User clicked on an existing furniture item to drag it
                 const itemToDrag = furniture[clickedKey];
                 setIsDragging(true);
                 setDraggedType(TOOL_TYPES.furniture);
                 setDraggedSubType(itemToDrag.type);
                 setPhantomObjectRotation(itemToDrag.rotation || 0);
-                setPhantomObjectPosition({ x: clickedX, z: clickedZ }); // Initialize phantom position
-                setOriginalDraggedItemKey(clickedKey); // Store the key of the original item
+                setPhantomObjectPosition({ x: clickedX, z: clickedZ });
+                setOriginalDraggedItemKey(clickedKey);
 
-                // Temporarily remove the item from the scene so it doesn't render twice
                 setFurniture((prev) => {
                     const newFurniture = { ...prev };
                     delete newFurniture[clickedKey];
@@ -2213,7 +2229,6 @@ export default function Edit() {
 
             if (intersectionPoint) {
                 const newHoveredCell = { x: Math.round(intersectionPoint.x), z: Math.round(intersectionPoint.z) };
-                // Only update if the hovered cell actually changed
                 if (!hoveredCell || newHoveredCell.x !== hoveredCell.x || newHoveredCell.z !== hoveredCell.z) {
                     setHoveredCell(newHoveredCell);
                 }
@@ -2221,7 +2236,6 @@ export default function Edit() {
                 if (isDragging && draggedType) {
                     const snappedX = Math.round(intersectionPoint.x);
                     const snappedZ = Math.round(intersectionPoint.z);
-                    // Only update if phantom position actually changed
                     if (!phantomObjectPosition || snappedX !== phantomObjectPosition.x || snappedZ !== phantomObjectPosition.z) {
                         setPhantomObjectPosition({ x: snappedX, z: snappedZ });
                     }
@@ -2242,10 +2256,10 @@ export default function Edit() {
                     }
                 }
             } else {
-                if (hoveredCell) { // Only clear if it was previously set
+                if (hoveredCell) {
                     setHoveredCell(null);
                 }
-                if (isDragging && draggedType && phantomObjectPosition) { // Only clear if it was previously set
+                if (isDragging && draggedType && phantomObjectPosition) {
                     setPhantomObjectPosition(null);
                 }
             }
@@ -2259,7 +2273,6 @@ export default function Edit() {
                     const finalZ = Math.round(phantomObjectPosition.z);
                     const key = getKey(finalX, finalZ);
 
-                    // Determine if placement is valid
                     const isPlacementValid = floorTiles[key] &&
                         (!furniture[key] || (furniture[key].type === 'door' || furniture[key].type === 'window'));
 
@@ -2302,7 +2315,7 @@ export default function Edit() {
                                 offsetZ: 0,
                                 isSnapped: false,
                                 dimensions: phantomDimensions,
-                                neighborLeft: false, // Initialize neighbor flags
+                                neighborLeft: false,
                                 neighborRight: false,
                                 neighborFront: false,
                                 neighborBack: false,
@@ -2311,9 +2324,7 @@ export default function Edit() {
                             setFurniture((prev) => {
                                 let updated = { ...prev, [key]: newFurniture };
                                 if (draggedSubType === 'window') {
-                                    // Update the newly placed window and its neighbors
                                     updated = updateNeighboringWindows(finalX, finalZ, updated);
-                                    // Also update its neighbors
                                     const neighborsToRecheck = [
                                         getKey(finalX - 1, finalZ), getKey(finalX + 1, finalZ),
                                         getKey(finalX, finalZ - 1), getKey(finalX, finalZ + 1),
@@ -2340,13 +2351,12 @@ export default function Edit() {
                             }
                             checkGridExpansion(finalX, finalZ);
                         } else {
-                            // If placement is invalid, revert the dragged item to its original position if it was an existing item
                             if (originalDraggedItemKey && furniture[originalDraggedItemKey] === undefined) {
                                 setFurniture((prev) => ({ ...prev, [originalDraggedItemKey]: {
                                         type: draggedSubType,
-                                        color: selectedColor, // Use current selected color for consistency if it changed during drag
+                                        color: selectedColor,
                                         rotation: phantomObjectRotation,
-                                        offsetX: 0, // Revert to original offsets
+                                        offsetX: 0,
                                         offsetZ: 0,
                                         isSnapped: false,
                                         dimensions: FURNITURE_CATEGORIES[Object.keys(FURNITURE_CATEGORIES).find(cat => FURNITURE_CATEGORIES[cat].some(item => item.type === draggedSubType))].find(item => item.type === draggedSubType).dimensions,
@@ -2360,7 +2370,6 @@ export default function Edit() {
                         }
                     }
                 } else if (originalDraggedItemKey && furniture[originalDraggedItemKey] === undefined) {
-                    // If pointerup happened outside a valid intersection point, and it was an existing item being dragged, revert it
                     setFurniture((prev) => ({ ...prev, [originalDraggedItemKey]: {
                             type: draggedSubType,
                             color: selectedColor,
@@ -2382,7 +2391,7 @@ export default function Edit() {
                 setDraggedSubType(null);
                 setPhantomObjectPosition(null);
                 setPhantomObjectRotation(0);
-                setOriginalDraggedItemKey(null); // Clear original key
+                setOriginalDraggedItemKey(null);
             };
 
             const currentCanvas = gl.domElement;
@@ -2402,7 +2411,6 @@ export default function Edit() {
                 Math.round(data.position.x) === hoveredCell.x &&
                 Math.round(data.position.z) === hoveredCell.z;
 
-            // Choose material based on phantom status and placement validity
             const currentPhantomMaterial = isPhantom && !isPlacementValid ? invalidPhantomMaterial : phantomMaterial;
 
             switch (itemType) {
@@ -2442,7 +2450,6 @@ export default function Edit() {
                 case 'desk': return <Desk color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
                 case 'officeChair': return <OfficeChair color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
                 case 'filingCabinet': return <FilingCabinet color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
-                // Removed 'painting' case
                 case 'diningTable': return <DiningTable color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
                 case 'diningChair': return <DiningChair color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
                 case TOOL_TYPES.floor: return <FloorPhantom phantomMaterial={currentPhantomMaterial} />;
@@ -2505,7 +2512,6 @@ export default function Edit() {
                     }
 
                     if (furnitureData) {
-                        // Only render if it's not the item currently being dragged
                         if (originalDraggedItemKey !== key) {
                             const positionX = x + (furnitureData.offsetX || 0);
                             const positionZ = z + (furnitureData.offsetZ || 0);
@@ -2583,20 +2589,16 @@ export default function Edit() {
         setIsDragging(true);
         setDraggedType(TOOL_TYPES.furniture);
         setDraggedSubType(type);
-        // Set initial rotation for painting to 180 degrees (Math.PI)
         setPhantomObjectRotation(type === 'painting' ? Math.PI : 0);
-        setOriginalDraggedItemKey(null); // When dragging from inventory, no original key
+        setOriginalDraggedItemKey(null);
     }, []);
 
     const handleToolToggle = useCallback((toolLabel) => {
         if (selectedTool === toolLabel) {
-            // If the same tool is clicked again, deactivate it
             setSelectedTool(null);
         } else {
-            // Otherwise, activate the new tool
             setSelectedTool(toolLabel);
         }
-        // Always reset dragging state when a tool button is clicked
         setIsDragging(false);
         setDraggedType(null);
         setDraggedSubType(null);
@@ -2720,7 +2722,6 @@ export default function Edit() {
                 if (userJson) {
                     try {
                         currentUser = JSON.parse(userJson);
-                        // console.log("Parsed user data:", currentUser);
                     } catch (e) {
                         console.error("Помилка парсингу користувача з localStorage під час завантаження, скидаємо дані користувача:", e);
                         currentUser = null;
@@ -2911,7 +2912,6 @@ export default function Edit() {
                         originalDraggedItemKey={originalDraggedItemKey}
                     />
                 </Canvas>
-                {/* New position for the tutorial button */}
                 <div style={{
                     position: 'absolute',
                     top: '20px',
@@ -3168,8 +3168,8 @@ export default function Edit() {
                                 style={{
                                     ...styles.buttonBase,
                                     ...(selectedTool === label ? styles.toolButtonActive : styles.toolButtonInactive),
-                                    padding: '10px 15px', // Override base padding for smaller tool buttons
-                                    fontSize: '1em', // Override base font size for smaller tool buttons
+                                    padding: '10px 15px',
+                                    fontSize: '1em',
                                 }}
                                 hoverStyle={selectedTool === label ? styles.toolButtonActiveHover : styles.toolButtonInactiveHover}
                             >

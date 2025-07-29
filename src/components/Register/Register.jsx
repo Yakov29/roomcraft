@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Container from "../Container/Container";
 import "./Register.css";
 
 const Register = () => {
@@ -176,7 +175,6 @@ const Register = () => {
                     type="button"
                     className={`register__button ${!isFormValid ? "register__button--disabled" : ""}`}
                     onClick={handleRegister}
-                    disabled={!isFormValid}
                 >
                     Зареєструватись
                 </button>
