@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { Outlines } from '@react-three/drei';
-import { GridHelper, Vector3, MeshStandardMaterial, Raycaster, Plane, Euler, Quaternion, PointLight, SpotLight } from 'three';
+import { GridHelper, Vector3, MeshStandardMaterial, Raycaster, Plane, Euler, Quaternion, PointLight, SpotLight, TextureLoader } from 'three';
 import * as THREE from 'three';
 import { useParams, useNavigate } from 'react-router-dom';
 
@@ -22,7 +22,7 @@ const styles = {
         left: 0,
         width: '100vw',
         height: '100vh',
-        backgroundColor: 'var(--background-color)',
+        backgroundColor: 'rgba(0,0,0,0.7)', // Darker overlay for tutorial
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -41,7 +41,7 @@ const styles = {
         gap: '20px',
     },
     tutorialTitle: {
-        color: 'var(--accent)',
+        color: '#E1E6F0',
         margin: 0,
         fontSize: '2em',
         fontWeight: '700',
@@ -102,6 +102,7 @@ const styles = {
         borderRadius: '15px 15px 0 0',
         position: 'relative',
         zIndex: 999,
+        transition: 'transform 0.3s ease-out', // Smooth transition for showing/hiding
     },
     inventorySection: {
         background: 'var(--primary-darker)',
@@ -116,7 +117,7 @@ const styles = {
     },
     inventoryTitle: {
         margin: '0 0 10px 0',
-        color: 'var(--accent)',
+        color: '#E1E6F0',
         fontSize: '1.2em',
         fontWeight: '700',
     },
@@ -218,6 +219,14 @@ const styles = {
     exitButtonHover: {
         backgroundColor: '#6B7280',
         transform: 'translateY(-2px)',
+    },
+    tutorialButton: {
+        backgroundColor: '#007BFF',
+        boxShadow: '0 4px 12px rgba(0, 123, 255, 0.3)',
+    },
+    tutorialButtonHover: {
+        backgroundColor: '#0056b3',
+        transform: 'translateY(-2px)',
     }
 };
 
@@ -291,14 +300,20 @@ const BASE_COLORS = ['#E1E6F0', '#2C3A59', '#2D9CDB', '#FFA94D', '#228B22'];
 
 const hoverMaterial = new MeshStandardMaterial({ color: "#ADD8E6", transparent: true, opacity: 0.3 });
 const phantomMaterial = new MeshStandardMaterial({ color: "#2D9CDB", transparent: true, opacity: 0.5 });
+const invalidPhantomMaterial = new MeshStandardMaterial({ color: "#FF0000", transparent: true, opacity: 0.5 });
+
 
 const FURNITURE_CATEGORIES = {
-    '🛋️ Вітальня': [
+    '🛋️ Меблі': [
         { type: 'sofa', label: 'Диван', dimensions: { width: 1.6, depth: 0.8, height: 0.8 } },
-        { type: 'chair', label: 'Крісло', dimensions: { width: 0.6, depth: 0.6, height: 0.8 } },
+        { type: 'chair', label: 'Стілець', dimensions: { width: 0.6, depth: 0.6, height: 0.8 } },
         { type: 'table', label: 'Стіл', dimensions: { width: 1.0, depth: 0.8, height: 0.8 } },
+        { type: 'coffeeTable', label: 'Журнальний стіл', dimensions: { width: 0.8, depth: 0.5, height: 0.4 } },
+        { type: 'bookshelf', label: 'Книжкова шафа', dimensions: { width: 1.0, depth: 0.3, height: 1.8 } },
+        { type: 'armchair', label: 'Крісло', dimensions: { width: 0.8, depth: 0.8, height: 0.9 } },
+        { type: 'fireplace', label: 'Камін', dimensions: { width: 1.5, depth: 0.5, height: 1.2 } },
     ],
-    '🚪 Прорізи': [
+    '🚪 Двері та вікна': [
         { type: 'door', label: 'Двері', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
         { type: 'window', label: 'Вікно', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
     ],
@@ -306,27 +321,48 @@ const FURNITURE_CATEGORIES = {
         { type: 'kitchenTable', label: 'Кухонний стіл', dimensions: { width: 1.2, depth: 0.7, height: 0.8 } },
         { type: 'kitchenCabinet', label: 'Кухонна шафа', dimensions: { width: 1.0, depth: 0.5, height: 1.0 } },
     ],
-    '🌳 Сад': [
+    '🌳 Вулиця': [
         { type: 'outdoorChair', label: 'Вуличний стілець', dimensions: { width: 0.6, depth: 0.6, height: 0.5 } },
         { type: 'outdoorTable', label: 'Вуличний стіл', dimensions: { width: 1.0, depth: 1.0, height: 0.75 } },
+        { type: 'grill', label: 'Гриль', dimensions: { width: 0.7, depth: 0.5, height: 1.0 } },
+        { type: 'gardenBench', label: 'Садова лавка', dimensions: { width: 1.5, depth: 0.5, height: 0.6 } },
     ],
     '🛏️ Спальня': [
         { type: 'bed', label: 'Ліжко', dimensions: { width: 1.9, depth: 1.3, height: 0.5 } },
-        { type: 'lamp', label: 'Лампа', dimensions: { width: 0.3, depth: 0.3, height: 1.1 } },
+        { type: 'lamp', label: 'Торшер', dimensions: { width: 0.3, depth: 0.3, height: 1.1 } },
         { type: 'cabinet', label: 'Шафа', dimensions: { width: 1.0, depth: 0.5, height: 2.0 } },
+        { type: 'dresser', label: 'Комод', dimensions: { width: 1.2, depth: 0.5, height: 0.9 } },
+        { type: 'nightstand', label: 'Тумбочка', dimensions: { width: 0.5, depth: 0.4, height: 0.6 } },
+        { type: 'wardrobe', label: 'Шафа для одягу', dimensions: { width: 1.5, depth: 0.6, height: 2.2 } },
     ],
-    '💻 Електроніка': [
+    '💻 Техніка': [
         { type: 'tv', label: 'Телевізор', dimensions: { width: 1.6, depth: 0.6, height: 1.0 } },
-        { type: 'console', label: 'Ігрова приставка', dimensions: { width: 0.4, depth: 0.1, height: 0.6 } },
-        { type: 'computerSetup', label: 'Комп\'ютерний сетап', dimensions: { width: 1.6, depth: 0.7, height: 1.0 } },
+        { type: 'console', label: 'Консоль', dimensions: { width: 0.4, depth: 0.1, height: 0.6 } },
+        { type: 'computerSetup', label: 'Комп’ютер', dimensions: { width: 1.6, depth: 0.7, height: 1.0 } },
     ],
     '💡 Освітлення': [
         { type: 'ceilingLamp', label: 'Стельова лампа', dimensions: { width: 0.6, depth: 0.6, height: 0.6 } },
-        { type: 'rgbStrip', label: 'RGB стрічка', dimensions: { width: 1.0, depth: 0.05, height: 0.02 } },
+        { type: 'rgbStrip', label: 'RGB-підсвітка', dimensions: { width: 1.0, depth: 0.05, height: 0.02 } },
+        { type: 'spotlight', label: 'Прожектор', dimensions: { width: 0.3, depth: 0.3, height: 0.3 } },
     ],
     '🌱 Рослини': [
-        { type: 'pottedPlant', label: 'Горщикова рослина', dimensions: { width: 0.4, depth: 0.4, height: 0.8 } },
+        { type: 'pottedPlant', label: 'Кімнатна рослина', dimensions: { width: 0.4, depth: 0.4, height: 0.8 } },
         { type: 'tallPlant', label: 'Висока рослина', dimensions: { width: 0.5, depth: 0.5, height: 1.5 } },
+    ],
+    '🚿 Ванна кімната': [
+        { type: 'toilet', label: 'Унітаз', dimensions: { width: 0.4, depth: 0.7, height: 0.7 } },
+        { type: 'sink', label: 'Раковина', dimensions: { width: 0.6, depth: 0.5, height: 0.8 } },
+        { type: 'bathtub', label: 'Ванна', dimensions: { width: 1.7, depth: 0.8, height: 0.6 } },
+        { type: 'shower', label: 'Душ', dimensions: { width: 0.9, depth: 0.9, height: 2.0 } },
+    ],
+    '🏢 Офіс': [
+        { type: 'desk', label: 'Письмовий стіл', dimensions: { width: 1.4, depth: 0.7, height: 0.75 } },
+        { type: 'officeChair', label: 'Офісне крісло', dimensions: { width: 0.6, depth: 0.6, height: 0.9 } },
+        { type: 'filingCabinet', label: 'Картотечна шафа', dimensions: { width: 0.5, depth: 0.5, height: 1.5 } },
+    ],
+    '🍽️ Їдальня': [
+        { type: 'diningTable', label: 'Обідній стіл', dimensions: { width: 1.8, depth: 0.9, height: 0.75 } },
+        { type: 'diningChair', label: 'Обідній стілець', dimensions: { width: 0.5, depth: 0.5, height: 0.9 } },
     ]
 };
 
@@ -458,22 +494,33 @@ const Modal = ({ show, title, message, onClose, onConfirm, isConfirm = false }) 
     );
 };
 
-const Chair = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
-    <group rotation={[0, rotation, 0]}>
-        <mesh position={[0, 0.25, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
-            <boxGeometry args={[0.5, 0.1, 0.5]} />
-        </mesh>
-        <mesh position={[0, 0.5, -0.2]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
-            <boxGeometry args={[0.5, 0.5, 0.1]} />
-        </mesh>
-        {[[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]].map(([x, z], i) => (
-            <mesh key={i} position={[x, 0.125, z]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
-                <cylinderGeometry args={[0.03, 0.03, 0.25]} />
+const Chair = React.memo(({ color = '#A0522D', rotation, isHighlighted, isPhantom }) => {
+    const seatMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.1 });
+
+    const frameMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({ color: '#2C3A59', roughness: 0.6 });
+
+    return (
+        <group rotation={[0, rotation, 0]}>
+            <mesh position={[0, 0.3, 0]} material={seatMaterial}>
+                <boxGeometry args={[0.5, 0.08, 0.5]} />
             </mesh>
-        ))}
-        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
-    </group>
-));
+            <mesh position={[0, 0.58, -0.22]} material={seatMaterial}>
+                <boxGeometry args={[0.5, 0.5, 0.08]} />
+            </mesh>
+            {[[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]].map(([x, z], i) => (
+                <mesh key={i} position={[x, 0.13, z]} material={frameMaterial}>
+                    <cylinderGeometry args={[0.025, 0.025, 0.26, 12]} />
+                </mesh>
+            ))}
+            {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+        </group>
+    );
+});
+
 
 const OutdoorChair = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
     <group rotation={[0, rotation, 0]}>
@@ -506,6 +553,116 @@ const Table = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
     </group>
 ));
 
+const CoffeeTable = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.38, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[0.8, 0.04, 0.5]} />
+        </mesh>
+        {[[-0.35, -0.2], [0.35, -0.2], [-0.35, 0.2], [0.35, 0.2]].map(([x, z], i) => (
+            <mesh key={i} position={[x, 0.19, z]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+                <boxGeometry args={[0.05, 0.38, 0.05]} />
+            </mesh>
+        ))}
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const Bookshelf = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.9, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[1.0, 1.8, 0.3]} />
+        </mesh>
+        {[0.4, 0, -0.4].map((y, i) => (
+            <mesh key={i} position={[0, 0.9 + y, 0.13]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+                <boxGeometry args={[0.9, 0.05, 0.2]} />
+            </mesh>
+        ))}
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const Armchair = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
+    const baseMaterial = new MeshStandardMaterial({ color: "#2C3A59" });
+    const seatMaterial = new MeshStandardMaterial({ color });
+
+    return (
+        <group rotation={[0, rotation, 0]}>
+            <mesh position={[0, 0.2, 0]} material={isPhantom ? phantomMaterial : baseMaterial}>
+                <boxGeometry args={[0.8, 0.3, 0.8]} />
+            </mesh>
+            <mesh position={[0, 0.35, 0]} material={isPhantom ? phantomMaterial : seatMaterial}>
+                <boxGeometry args={[0.7, 0.15, 0.7]} />
+            </mesh>
+            <mesh position={[0, 0.6, -0.3]} material={isPhantom ? phantomMaterial : seatMaterial}>
+                <boxGeometry args={[0.7, 0.4, 0.1]} />
+            </mesh>
+            <mesh position={[-0.35, 0.45, 0]} material={isPhantom ? phantomMaterial : seatMaterial}>
+                <boxGeometry args={[0.1, 0.4, 0.7]} />
+            </mesh>
+            <mesh position={[0.35, 0.45, 0]} material={isPhantom ? phantomMaterial : seatMaterial}>
+                <boxGeometry args={[0.1, 0.4, 0.7]} />
+            </mesh>
+            {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+        </group>
+    );
+});
+
+const Fireplace = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.6, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[1.5, 1.2, 0.5]} />
+        </mesh>
+        <mesh position={[0, 0.4, 0.26]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#111111" })}>
+            <boxGeometry args={[0.8, 0.8, 0.05]} />
+        </mesh>
+        <mesh position={[0, 0.1, 0.26]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#8B4513" })}>
+            <boxGeometry args={[0.8, 0.2, 0.05]} />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const DiningTable = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.75, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[1.8, 0.05, 0.9]} />
+        </mesh>
+        {[[-0.8, -0.4], [0.8, -0.4], [-0.8, 0.4], [0.8, 0.4]].map(([x, z], i) => (
+            <mesh key={i} position={[x, 0.375, z]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+                <boxGeometry args={[0.07, 0.75, 0.07]} />
+            </mesh>
+        ))}
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const DiningChair = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
+    const seatMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.1 });
+
+    const frameMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({ color: '#2C3A59', roughness: 0.6 });
+
+    return (
+        <group rotation={[0, rotation, 0]}>
+            <mesh position={[0, 0.4, 0]} material={seatMaterial}>
+                <boxGeometry args={[0.5, 0.08, 0.5]} />
+            </mesh>
+            <mesh position={[0, 0.7, -0.22]} material={seatMaterial}>
+                <boxGeometry args={[0.5, 0.6, 0.08]} />
+            </mesh>
+            {[[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]].map(([x, z], i) => (
+                <mesh key={i} position={[x, 0.18, z]} material={frameMaterial}>
+                    <cylinderGeometry args={[0.025, 0.025, 0.36, 12]} />
+                </mesh>
+            ))}
+            {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+        </group>
+    );
+});
+
 const OutdoorTable = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
     <group rotation={[0, rotation, 0]}>
         <mesh position={[0, 0.7, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
@@ -517,6 +674,43 @@ const OutdoorTable = React.memo(({ color, rotation, isHighlighted, isPhantom }) 
         <mesh position={[0, 0.05, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#4B5563" })}>
             <cylinderGeometry args={[0.3, 0.3, 0.1, 32]} />
         </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const Grill = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.8, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#333333" })}>
+            <boxGeometry args={[0.7, 0.2, 0.5]} />
+        </mesh>
+        <mesh position={[0, 0.95, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#555555" })}>
+            <boxGeometry args={[0.7, 0.05, 0.5]} />
+        </mesh>
+        <mesh position={[0, 0.6, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#444444" })}>
+            <cylinderGeometry args={[0.05, 0.05, 1.2, 16]} />
+        </mesh>
+        {[[-0.2, -0.15], [0.2, -0.15], [-0.2, 0.15], [0.2, 0.15]].map(([x, z], i) => (
+            <mesh key={i} position={[x, 0.05, z]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#222222" })}>
+                <cylinderGeometry args={[0.03, 0.03, 0.1, 12]} />
+            </mesh>
+        ))}
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const GardenBench = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.3, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[1.5, 0.1, 0.5]} />
+        </mesh>
+        <mesh position={[0, 0.45, -0.2]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[1.5, 0.4, 0.1]} />
+        </mesh>
+        {[[-0.7, 0.05, -0.2], [0.7, 0.05, -0.2], [-0.7, 0.05, 0.2], [0.7, 0.05, 0.2]].map(([x, y, z], i) => (
+            <mesh key={i} position={[x, y, z]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#4B5563" })}>
+                <boxGeometry args={[0.05, 0.5, 0.05]} />
+            </mesh>
+        ))}
         {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
     </group>
 ));
@@ -605,6 +799,65 @@ const Lamp = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
     );
 });
 
+const Dresser = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.45, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[1.2, 0.9, 0.5]} />
+        </mesh>
+        {[0.25, -0.25].map((x, i) => (
+            <mesh key={i} position={[x, 0.45, 0.26]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+                <boxGeometry args={[0.5, 0.8, 0.05]} />
+            </mesh>
+        ))}
+        {[0.15, -0.15].map((y, i) => (
+            <mesh key={i} position={[0, 0.6 + y, 0.28]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#FFD700" })}>
+                <boxGeometry args={[0.1, 0.02, 0.05]} />
+            </mesh>
+        ))}
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const Nightstand = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.3, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[0.5, 0.6, 0.4]} />
+        </mesh>
+        <mesh position={[0, 0.45, 0.21]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+            <boxGeometry args={[0.4, 0.2, 0.02]} />
+        </mesh>
+        <mesh position={[0, 0.15, 0.21]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+            <boxGeometry args={[0.4, 0.2, 0.02]} />
+        </mesh>
+        <mesh position={[0, 0.45, 0.22]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#FFD700" })}>
+            <boxGeometry args={[0.1, 0.02, 0.02]} />
+        </mesh>
+        <mesh position={[0, 0.15, 0.22]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#FFD700" })}>
+            <boxGeometry args={[0.1, 0.02, 0.02]} />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const Wardrobe = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 1.1, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[1.5, 2.2, 0.6]} />
+        </mesh>
+        {[-0.35, 0.35].map((x, i) => (
+            <mesh key={i} position={[x, 1.1, 0.31]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+                <boxGeometry args={[0.7, 2.0, 0.05]} />
+            </mesh>
+        ))}
+        {[[-0.6, 1.1, 0.33], [0.6, 1.1, 0.33]].map(([x, y, z], i) => (
+            <mesh key={i} position={[x, y, z]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#FFD700" })}>
+                <boxGeometry args={[0.05, 0.2, 0.05]} />
+            </mesh>
+        ))}
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
 const Cabinet = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
     <group rotation={[0, rotation, 0]}>
         <mesh position={[0, 1, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
@@ -667,19 +920,202 @@ const KitchenTable = React.memo(({ color, rotation, isHighlighted, isPhantom }) 
     </group>
 ));
 
-const Door = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+const Toilet = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
     <group rotation={[0, rotation, 0]}>
-        <mesh position={[0, WALL_HEIGHT / 2, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
-            <boxGeometry args={[0.9, WALL_HEIGHT, 0.05]} />
+        <mesh position={[0, 0.2, 0.1]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[0.4, 0.4, 0.6]} />
         </mesh>
-        <mesh position={[0.4, WALL_HEIGHT / 2 - 0.5, 0.03]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#FFD700" })}>
+        <mesh position={[0, 0.5, -0.2]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[0.4, 0.2, 0.2]} />
+        </mesh>
+        <mesh position={[0, 0.6, -0.3]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[0.4, 0.4, 0.1]} />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const Sink = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.75, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[0.6, 0.05, 0.5]} />
+        </mesh>
+        <mesh position={[0, 0.5, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+            <boxGeometry args={[0.5, 0.7, 0.4]} />
+        </mesh>
+        <mesh position={[0, 0.7, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#ADD8E6", transparent: true, opacity: 0.7 })}>
+            <cylinderGeometry args={[0.15, 0.15, 0.1, 32]} />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const Bathtub = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.3, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[1.7, 0.6, 0.8]} />
+        </mesh>
+        <mesh position={[0, 0.35, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#ADD8E6", transparent: true, opacity: 0.7 })}>
+            <boxGeometry args={[1.6, 0.5, 0.7]} />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const Shower = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, WALL_HEIGHT / 2, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#ADD8E6", transparent: true, opacity: 0.3 })}>
+            <boxGeometry args={[0.9, WALL_HEIGHT, 0.9]} />
+        </mesh>
+        <mesh position={[0, WALL_HEIGHT - 0.1, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#4B5563" })}>
+            <boxGeometry args={[0.1, 0.1, 0.1]} />
+        </mesh>
+        <mesh position={[0, WALL_HEIGHT - 0.2, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#4B5563" })}>
+            <cylinderGeometry args={[0.02, 0.02, 0.2, 16]} />
+        </mesh>
+        <mesh position={[0, WALL_HEIGHT - 0.3, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#AAAAAA" })}>
             <sphereGeometry args={[0.05, 16, 16]} />
         </mesh>
         {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
     </group>
 ));
 
-const Window = React.memo(({ color, rotation, isHighlighted, isPhantom, width = 0.9 }) => {
+const Desk = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.73, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[1.4, 0.04, 0.7]} />
+        </mesh>
+        <mesh position={[-0.6, 0.375, -0.25]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+            <boxGeometry args={[0.05, 0.75, 0.4]} />
+        </mesh>
+        <mesh position={[0.6, 0.375, -0.25]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+            <boxGeometry args={[0.05, 0.75, 0.4]} />
+        </mesh>
+        <mesh position={[-0.3, 0.5, 0.25]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[0.5, 0.4, 0.4]} />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const OfficeChair = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.45, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[0.5, 0.1, 0.5]} />
+        </mesh>
+        <mesh position={[0, 0.7, -0.2]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[0.5, 0.5, 0.1]} />
+        </mesh>
+        <mesh position={[0, 0.2, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#4B5563" })}>
+            <cylinderGeometry args={[0.05, 0.05, 0.4, 16]} />
+        </mesh>
+        <mesh position={[0, 0.05, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+            <cylinderGeometry args={[0.3, 0.3, 0.05, 5]} />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const FilingCabinet = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.75, 0]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: color })}>
+            <boxGeometry args={[0.5, 1.5, 0.5]} />
+        </mesh>
+        {[0.4, 0, -0.4].map((y, i) => (
+            <mesh key={i} position={[0, 0.75 + y, 0.26]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+                <boxGeometry args={[0.45, 0.4, 0.05]} />
+            </mesh>
+        ))}
+        {[0.4, 0, -0.4].map((y, i) => (
+            <mesh key={i} position={[0, 0.75 + y, 0.28]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#FFD700" })}>
+                <boxGeometry args={[0.1, 0.02, 0.05]} />
+            </mesh>
+        ))}
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const Painting = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
+    const paintingMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({ color: new THREE.Color(color) }); // Use color as tint
+
+    return (
+        <group rotation={[0, rotation, 0]}>
+            <mesh position={[0, WALL_HEIGHT / 2, -0.49]} material={paintingMaterial}>
+                <boxGeometry args={[1.0, 0.8, 0.02]} />
+            </mesh>
+            <mesh position={[0, WALL_HEIGHT / 2, -0.48]} material={isPhantom ? phantomMaterial : new MeshStandardMaterial({ color: "#2C3A59" })}>
+                <boxGeometry args={[1.05, 0.85, 0.01]} />
+            </mesh>
+            {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+        </group>
+    );
+});
+
+
+const Door = React.memo(({ color = '#5A2D0C', rotation = 0, isHighlighted, isPhantom }) => {
+    const doorMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({
+            color,
+            roughness: 0.3,
+            metalness: 0.1,
+        });
+
+    const frameMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({
+            color: '#3B2A1A',
+            roughness: 0.4,
+        });
+
+    const handleMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({
+            color: '#FFD700',
+            metalness: 1,
+            roughness: 0.15,
+        });
+
+    return (
+        <group rotation={[0, rotation, 0]}>
+            {/* Основное дверное полотно */}
+            <mesh position={[0, WALL_HEIGHT / 2, 0]} material={doorMaterial}>
+                <boxGeometry args={[0.85, WALL_HEIGHT - 0.2, 0.05]} />
+            </mesh>
+
+
+
+            <mesh position={[0, WALL_HEIGHT - 0.04, -0.03]} material={frameMaterial}>
+                <boxGeometry args={[1.0, 0.1, 0.06]} />
+            </mesh>
+
+            <mesh position={[-0.48, WALL_HEIGHT / 2, -0.03]} material={frameMaterial}>
+                <boxGeometry args={[0.06, WALL_HEIGHT, 0.06]} />
+            </mesh>
+
+            <mesh position={[0.48, WALL_HEIGHT / 2, -0.03]} material={frameMaterial}>
+                <boxGeometry args={[0.06, WALL_HEIGHT, 0.06]} />
+            </mesh>
+
+            <mesh position={[0.37, WALL_HEIGHT / 2, 0.035]} material={handleMaterial}>
+                <boxGeometry args={[0.15, 0.04, 0.025]} />
+            </mesh>
+
+            <mesh position={[0.37, WALL_HEIGHT / 2, -0.035]} material={handleMaterial}>
+                <boxGeometry args={[0.15, 0.04, 0.025]} />
+            </mesh>
+
+            {isHighlighted && (
+                <Outlines thickness={0.02} color="#FFFF00" opacity={1} />
+            )}
+        </group>
+    );
+});
+
+
+const Window = React.memo(({ color, rotation, isHighlighted, isPhantom, neighborLeft, neighborRight, neighborFront, neighborBack }) => {
     const material = new MeshStandardMaterial({
         color,
         transparent: true,
@@ -688,40 +1124,97 @@ const Window = React.memo(({ color, rotation, isHighlighted, isPhantom, width = 
         metalness: 0.2,
     });
 
+    const frameMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({
+            color: '#3B2A1A',
+            roughness: 0.4,
+        });
+
+    const windowWidth = 0.9;
+    const frameThickness = 0.05;
+
     return (
         <group rotation={[0, rotation, 0]}>
+            {/* Main glass pane */}
             <mesh position={[0, WALL_HEIGHT / 2, 0]} material={isPhantom ? phantomMaterial : material}>
-                <boxGeometry args={[width, WALL_HEIGHT, 0.01]} />
+                <boxGeometry args={[windowWidth, WALL_HEIGHT, 0.01]} />
             </mesh>
+
+            {/* Top Frame */}
+            <mesh position={[0, WALL_HEIGHT - frameThickness / 2, 0]} material={isPhantom ? phantomMaterial : frameMaterial}>
+                <boxGeometry args={[windowWidth + frameThickness, frameThickness, frameThickness]} />
+            </mesh>
+
+            {/* Bottom Frame */}
+            <mesh position={[0, frameThickness / 2, 0]} material={isPhantom ? phantomMaterial : frameMaterial}>
+                <boxGeometry args={[windowWidth + frameThickness, frameThickness, frameThickness]} />
+            </mesh>
+
+            {/* Side Frames (conditional rendering for snapping) */}
+            {!(rotation === 0 && neighborLeft) && !(rotation === Math.PI && neighborRight) && !(rotation === Math.PI / 2 && neighborFront) && !(rotation === 3 * Math.PI / 2 && neighborBack) && (
+                <mesh position={[-(windowWidth / 2 + frameThickness / 2), WALL_HEIGHT / 2, 0]} material={isPhantom ? phantomMaterial : frameMaterial}>
+                    <boxGeometry args={[frameThickness, WALL_HEIGHT, frameThickness]} />
+                </mesh>
+            )}
+            {!(rotation === 0 && neighborRight) && !(rotation === Math.PI && neighborLeft) && !(rotation === Math.PI / 2 && neighborBack) && !(rotation === 3 * Math.PI / 2 && neighborFront) && (
+                <mesh position={[(windowWidth / 2 + frameThickness / 2), WALL_HEIGHT / 2, 0]} material={isPhantom ? phantomMaterial : frameMaterial}>
+                    <boxGeometry args={[frameThickness, WALL_HEIGHT, frameThickness]} />
+                </mesh>
+            )}
 
             {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
         </group>
     );
 });
 
-const TV = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
-    const frameMaterial = new MeshStandardMaterial({ color: "#2C3A59" });
-    const screenMaterial = new MeshStandardMaterial({ color: "#000000" });
-    const standMaterial = new MeshStandardMaterial({ color: "#1E1E1E" });
-    const cabinetMaterial = new MeshStandardMaterial({ color: "#8B5E3C" });
+
+const TV = React.memo(({ color = '#8B5E3C', rotation = 0, isHighlighted, isPhantom, standColor = '#1E1E1E' }) => {
+    const frameMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({ color: "#2C3A59", roughness: 0.3, metalness: 0.4 });
+
+    const screenMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({ color: "#000000", roughness: 0.1, metalness: 0.9, envMapIntensity: 0.7 });
+
+    const standMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({ color: standColor, roughness: 0.5, metalness: 0.6 });
+
+    const cabinetMaterial = isPhantom
+        ? phantomMaterial
+        : new MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.1 });
 
     return (
         <group rotation={[0, rotation, 0]}>
-            <mesh position={[0, 0.25, 0]} material={isPhantom ? phantomMaterial : cabinetMaterial}>
+            <mesh position={[0, 0.25, 0]} material={cabinetMaterial}>
                 <boxGeometry args={[1.6, 0.5, 0.6]} />
             </mesh>
-            <mesh position={[0, 0.8, 0]} material={isPhantom ? phantomMaterial : frameMaterial}>
-                <boxGeometry args={[1.2, 0.7, 0.05]} />
+
+            <mesh position={[0, 0.85, 0]} material={frameMaterial}>
+                <boxGeometry args={[1.25, 0.75, 0.06]} />
             </mesh>
-            <mesh position={[0, 0.8, 0.03]} material={isPhantom ? phantomMaterial : screenMaterial}>
-                <boxGeometry args={[1.1, 0.6, 0.01]} />
+
+            <mesh position={[0, 0.85, 0.035]} material={screenMaterial}>
+                <boxGeometry args={[1.15, 0.65, 0.015]} />
             </mesh>
-            <mesh position={[0, 0.55, 0]} material={isPhantom ? phantomMaterial : standMaterial}>
-                <boxGeometry args={[0.1, 0.2, 0.1]} />
+
+            <mesh position={[0, 0.55, 0]} material={standMaterial}>
+                <boxGeometry args={[0.12, 0.25, 0.12]} />
             </mesh>
-            <mesh position={[0, 0.45, 0]} material={isPhantom ? phantomMaterial : standMaterial}>
-                <boxGeometry args={[0.4, 0.02, 0.25]} />
+
+            <mesh position={[0, 0.43, 0]} material={standMaterial}>
+                <boxGeometry args={[0.5, 0.025, 0.3]} />
             </mesh>
+
+            {/* Ножки подставки */}
+            {[-0.18, 0.18].map((x) => (
+                <mesh key={x} position={[x, 0.35, 0.1]} material={standMaterial}>
+                    <boxGeometry args={[0.1, 0.15, 0.05]} />
+                </mesh>
+            ))}
+
             {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
         </group>
     );
@@ -857,56 +1350,129 @@ const RgbStrip = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
     );
 });
 
-const PottedPlant = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
-    const potMaterial = new MeshStandardMaterial({ color: "#8B4513" });
-    const plantMaterial = new MeshStandardMaterial({ color: "#228B22" });
+const PottedPlant = React.memo(({ color = "#2E8B57", rotation = 0, isHighlighted, isPhantom }) => {
+    const potMaterial = useMemo(() =>
+        new MeshStandardMaterial({
+            color: "#8B4513",
+            roughness: 0.6,
+            metalness: 0.3
+        }), []);
+
+    const plantMaterial = useMemo(() =>
+        new MeshStandardMaterial({
+            color,
+            roughness: 0.8,
+            metalness: 0,
+        }), [color]);
+
+    const leafMaterial = useMemo(() =>
+        new MeshStandardMaterial({
+            color,
+            roughness: 0.7,
+            metalness: 0,
+        }), [color]);
+
+    // Функция для создания двойных листьев — две плоскости, одна зеркально повернута
+    const Leaf = ({ position, rotation }) => (
+        <>
+            <mesh position={position} rotation={rotation} material={isPhantom ? phantomMaterial : leafMaterial}>
+                <planeGeometry args={[0.15, 0.3]} />
+            </mesh>
+            <mesh
+                position={position}
+                rotation={[rotation[0], rotation[1] + Math.PI, rotation[2]]}
+                material={isPhantom ? phantomMaterial : leafMaterial}
+            >
+                <planeGeometry args={[0.15, 0.3]} />
+            </mesh>
+        </>
+    );
 
     return (
-        <group rotation={[0, rotation, 0]}>
+        <group rotation={[0, rotation, 0]} position={[0, 0, 0]}>
+            {/* Горшок - цилиндр с отверстием */}
             <mesh position={[0, 0.15, 0]} material={isPhantom ? phantomMaterial : potMaterial}>
-                <cylinderGeometry args={[0.15, 0.2, 0.3, 16]} />
+                <cylinderGeometry args={[0.2, 0.25, 0.3, 32, 1, true]} />
             </mesh>
-            <mesh position={[0, 0.45, 0]} material={isPhantom ? phantomMaterial : plantMaterial}>
-                <sphereGeometry args={[0.2, 16, 16]} />
+            <mesh position={[0, 0.3, 0]} material={isPhantom ? phantomMaterial : potMaterial}>
+                <circleGeometry args={[0.2, 32]} />
             </mesh>
-            <mesh position={[0.1, 0.55, 0.1]} material={isPhantom ? phantomMaterial : plantMaterial}>
-                <boxGeometry args={[0.1, 0.3, 0.1]} />
+
+            {/* Стебель */}
+            <mesh position={[0, 0.5, 0]} material={isPhantom ? phantomMaterial : plantMaterial}>
+                <cylinderGeometry args={[0.04, 0.05, 0.4, 12]} />
             </mesh>
-            <mesh position={[-0.1, 0.5, -0.1]} material={isPhantom ? phantomMaterial : plantMaterial}>
-                <boxGeometry args={[0.1, 0.2, 0.1]} />
-            </mesh>
+
+            {/* Листья — двойные плоскости */}
+            <Leaf position={[0.1, 0.75, 0]} rotation={[0, 0, Math.PI / 6]} />
+            <Leaf position={[-0.1, 0.7, 0.05]} rotation={[0, Math.PI / 8, -Math.PI / 4]} />
+            <Leaf position={[0.05, 0.85, -0.1]} rotation={[Math.PI / 6, 0, Math.PI / 5]} />
+            <Leaf position={[-0.08, 0.9, 0]} rotation={[0, 0, -Math.PI / 8]} />
+
             {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
         </group>
     );
 });
 
-const TallPlant = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
-    const potMaterial = new MeshStandardMaterial({ color: "#696969" });
-    const stemMaterial = new MeshStandardMaterial({ color: "#556B2F" });
-    const leafMaterial = new MeshStandardMaterial({ color: "#3CB371" });
+const TallPlant = React.memo(({ color = "#3CB371", rotation = 0, isHighlighted, isPhantom }) => {
+    const potMaterial = useMemo(() =>
+        new MeshStandardMaterial({
+            color: "#696969",
+            roughness: 0.6,
+            metalness: 0.2
+        }), []);
+
+    const stemMaterial = useMemo(() =>
+        new MeshStandardMaterial({
+            color: "#556B2F",
+            roughness: 0.8,
+            metalness: 0
+        }), []);
+
+    const leafMaterial = useMemo(() =>
+        new MeshStandardMaterial({
+            color,
+            roughness: 0.7,
+            metalness: 0
+        }), [color]);
+
+    // Компонент двойного листа, два плейна спина к спине
+    const Leaf = ({ position, rotation, size }) => (
+        <>
+            <mesh position={position} rotation={rotation} material={isPhantom ? phantomMaterial : leafMaterial}>
+                <planeGeometry args={size} />
+            </mesh>
+            <mesh
+                position={position}
+                rotation={[rotation[0], rotation[1] + Math.PI, rotation[2]]}
+                material={isPhantom ? phantomMaterial : leafMaterial}
+            >
+                <planeGeometry args={size} />
+            </mesh>
+        </>
+    );
 
     return (
         <group rotation={[0, rotation, 0]}>
+            {/* Горшок */}
             <mesh position={[0, 0.1, 0]} material={isPhantom ? phantomMaterial : potMaterial}>
                 <cylinderGeometry args={[0.2, 0.25, 0.2, 16]} />
             </mesh>
+
+            {/* Стебель */}
             <mesh position={[0, 0.7, 0]} material={isPhantom ? phantomMaterial : stemMaterial}>
                 <cylinderGeometry args={[0.03, 0.03, 1.2, 8]} />
             </mesh>
-            <mesh position={[0.2, 1.2, 0]} rotation={[0, 0, Math.PI / 4]} material={isPhantom ? phantomMaterial : leafMaterial}>
-                <boxGeometry args={[0.1, 0.6, 0.02]} />
-            </mesh>
-            <mesh position={[-0.2, 1.0, 0.1]} rotation={[0, 0, -Math.PI / 6]} material={isPhantom ? phantomMaterial : leafMaterial}>
-                <boxGeometry args={[0.1, 0.5, 0.02]} />
-            </mesh>
-            <mesh position={[0, 0.9, -0.2]} rotation={[Math.PI / 6, 0, 0]} material={isPhantom ? phantomMaterial : leafMaterial}>
-                <boxGeometry args={[0.02, 0.4, 0.1]} />
-            </mesh>
+
+            {/* Листья — плоскости двойные */}
+            <Leaf position={[0.2, 1.2, 0]} rotation={[0, 0, Math.PI / 4]} size={[0.1, 0.6]} />
+            <Leaf position={[-0.1, 1.0, 0.1]} rotation={[0, 0, -Math.PI / 6]} size={[0.1, 0.5]} />
+            <Leaf position={[0, 0.9, -0.2]} rotation={[Math.PI / 6, 0, 0]} size={[0.4, 0.1]} />
+
             {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
         </group>
     );
 });
-
 
 const WallPhantom = React.memo(({ hasOpening }) => {
     if (hasOpening) {
@@ -1099,6 +1665,8 @@ export default function Edit() {
     const [draggedSubType, setDraggedSubType] = useState(null);
     const [phantomObjectPosition, setPhantomObjectPosition] = useState(null);
     const [phantomObjectRotation, setPhantomObjectRotation] = useState(0);
+    const [originalDraggedItemKey, setOriginalDraggedItemKey] = useState(null); // New state for dragging existing items
+
 
     const canvasRef = useRef();
 
@@ -1136,8 +1704,6 @@ export default function Edit() {
 
         setIsMobile(isMobileDevice());
 
-        return () => {
-        };
     }, [navigate]);
 
     const resetAllState = useCallback(() => {
@@ -1154,6 +1720,7 @@ export default function Edit() {
         setPhantomObjectRotation(0);
         setUserColors([]);
         setSelectedColor(BASE_COLORS[0]);
+        setOriginalDraggedItemKey(null); // Reset for dragging existing items
 
         targetCameraPosition.current.set(...INITIAL_CAMERA_POSITION);
         const tempCamera = new THREE.Camera();
@@ -1170,6 +1737,61 @@ export default function Edit() {
             setGridSize((prev) => prev * 2);
         }
     }, [gridSize]);
+
+    // Function to check and update neighboring windows for snapping
+    const updateNeighboringWindows = useCallback((x, z, currentFurnitureState) => {
+        const updatedFurniture = { ...currentFurnitureState };
+        const neighbors = [
+            { dx: -1, dz: 0, side: 'left' }, // Neighbor to the left of current
+            { dx: 1, dz: 0, side: 'right' },   // Neighbor to the right of current
+            { dx: 0, dz: -1, side: 'front' },  // Neighbor in front of current
+            { dx: 0, dz: 1, side: 'back' },  // Neighbor behind current
+        ];
+
+        const currentKey = getKey(x, z);
+        const currentRotation = updatedFurniture[currentKey]?.rotation || 0;
+
+        // Reset all neighbor flags for the current window before re-evaluating
+        updatedFurniture[currentKey] = {
+            ...updatedFurniture[currentKey],
+            neighborLeft: false,
+            neighborRight: false,
+            neighborFront: false,
+            neighborBack: false,
+        };
+
+        neighbors.forEach(n => {
+            const neighborX = x + n.dx;
+            const neighborZ = z + n.dz;
+            const neighborKey = getKey(neighborX, neighborZ);
+
+            if (updatedFurniture[neighborKey] && updatedFurniture[neighborKey].type === 'window') {
+                const neighborRotation = updatedFurniture[neighborKey].rotation || 0;
+
+                // Logic to determine which sides connect based on rotations
+                if (currentRotation === 0 || currentRotation === Math.PI) { // Window aligned with X-axis (width along X, depth along Z)
+                    if (n.dx === -1 && (neighborRotation === 0 || neighborRotation === Math.PI)) { // Left neighbor, also X-aligned
+                        updatedFurniture[currentKey].neighborLeft = true;
+                        updatedFurniture[neighborKey].neighborRight = true;
+                    } else if (n.dx === 1 && (neighborRotation === 0 || neighborRotation === Math.PI)) { // Right neighbor, also X-aligned
+                        updatedFurniture[currentKey].neighborRight = true;
+                        updatedFurniture[neighborKey].neighborLeft = true;
+                    }
+                } else if (currentRotation === Math.PI / 2 || currentRotation === 3 * Math.PI / 2) { // Window aligned with Z-axis (width along Z, depth along X)
+                    if (n.dz === -1 && (neighborRotation === Math.PI / 2 || neighborRotation === 3 * Math.PI / 2)) { // Front neighbor, also Z-aligned
+                        updatedFurniture[currentKey].neighborFront = true;
+                        updatedFurniture[neighborKey].neighborBack = true;
+                    } else if (n.dz === 1 && (neighborRotation === Math.PI / 2 || neighborRotation === 3 * Math.PI / 2)) { // Back neighbor, also Z-aligned
+                        updatedFurniture[currentKey].neighborBack = true;
+                        updatedFurniture[neighborKey].neighborFront = true;
+                    }
+                }
+            }
+        });
+
+        return updatedFurniture;
+    }, [getKey]);
+
 
     const rotateObject = useCallback(() => {
         if (isDragging && phantomObjectPosition && draggedType === TOOL_TYPES.furniture) {
@@ -1203,10 +1825,30 @@ export default function Edit() {
                     }
                 }
 
-                setFurniture((prev) => ({
-                    ...prev,
-                    [key]: { ...prev[key], rotation: newRotation, offsetX: newOffsetX, offsetZ: newOffsetZ, isSnapped: isSnapped },
-                }));
+                setFurniture((prev) => {
+                    let updated = {
+                        ...prev,
+                        [key]: { ...prev[key], rotation: newRotation, offsetX: newOffsetX, offsetZ: newOffsetZ, isSnapped: isSnapped },
+                    };
+
+                    if (currentFurniture.type === 'window') {
+                        // Re-evaluate neighbors for the rotated window and its previous/new neighbors
+                        updated = updateNeighboringWindows(hoveredCell.x, hoveredCell.z, updated);
+                        // Also update its neighbors
+                        const neighborsToRecheck = [
+                            getKey(hoveredCell.x - 1, hoveredCell.z),
+                            getKey(hoveredCell.x + 1, hoveredCell.z),
+                            getKey(hoveredCell.x, hoveredCell.z - 1),
+                            getKey(hoveredCell.x, hoveredCell.z + 1),
+                        ];
+                        neighborsToRecheck.forEach(nKey => {
+                            if (updated[nKey] && updated[nKey].type === 'window') {
+                                updated = updateNeighboringWindows(parseInt(nKey.split(',')[0]), parseInt(nKey.split(',')[1]), updated);
+                            }
+                        });
+                    }
+                    return updated;
+                });
 
                 if (currentFurniture.type === 'door' || currentFurniture.type === 'window') {
                     setWalls((prev) => {
@@ -1226,7 +1868,7 @@ export default function Edit() {
                 }));
             }
         }
-    }, [furniture, walls, getKey, hoveredCell, isDragging, phantomObjectPosition, draggedType, floorTiles]);
+    }, [furniture, walls, getKey, hoveredCell, isDragging, phantomObjectPosition, draggedType, floorTiles, updateNeighboringWindows]);
 
     const snapToWall = useCallback(() => {
         if (hoveredCell) {
@@ -1282,6 +1924,23 @@ export default function Edit() {
             setFurniture((prev) => {
                 const copy = { ...prev };
                 delete copy[key];
+
+                // If deleted item was a window, update its neighbors
+                if (removedFurnitureType === 'window') {
+                    const neighborsToRecheck = [
+                        getKey(x - 1, z), getKey(x + 1, z),
+                        getKey(x, z - 1), getKey(x, z + 1),
+                    ];
+                    neighborsToRecheck.forEach(nKey => {
+                        if (copy[nKey] && copy[nKey].type === 'window') {
+                            // Temporarily add the deleted window back to check its impact on neighbors, then remove
+                            const tempUpdatedFurniture = { ...copy, [key]: { type: 'window', rotation: furniture[key].rotation } };
+                            const rechecked = updateNeighboringWindows(parseInt(nKey.split(',')[0]), parseInt(nKey.split(',')[1]), tempUpdatedFurniture);
+                            Object.assign(copy, rechecked); // Merge changes back
+                            delete copy[key]; // Ensure it's removed
+                        }
+                    });
+                }
                 console.log(`Меблі видалено за адресою ${key}. Новий стан меблів:`, copy);
                 return copy;
             });
@@ -1311,7 +1970,7 @@ export default function Edit() {
                 return copy;
             });
         }
-    }, [furniture, walls, floorTiles, getKey]);
+    }, [furniture, walls, floorTiles, getKey, updateNeighboringWindows]);
 
     const handleRightClick = useCallback((e, x, z) => {
         e.nativeEvent.preventDefault();
@@ -1351,7 +2010,10 @@ export default function Edit() {
                                targetCameraQuaternion,
                                mobileMovementInput,
                                cameraRotationInput,
-                               cameraVerticalInput
+                               cameraVerticalInput,
+                               updateNeighboringWindows,
+                               setOriginalDraggedItemKey, // Pass this down
+                               originalDraggedItemKey // Pass this down
                            }) {
         const { gl, camera } = useThree();
         const PI_2 = Math.PI / 2;
@@ -1494,11 +2156,19 @@ export default function Edit() {
                 return;
             }
 
+            const intersectionPoint = getIntersectionPoint(domEvent);
+            if (!intersectionPoint) return;
+
+            const clickedX = Math.round(intersectionPoint.x);
+            const clickedZ = Math.round(intersectionPoint.z);
+            const clickedKey = getKey(clickedX, clickedZ);
+
             if (selectedTool === TOOL_TYPES.floor || selectedTool === TOOL_TYPES.wall || selectedTool === TOOL_TYPES.paint) {
                 setIsDragging(true);
                 setDraggedType(selectedTool);
                 setDraggedSubType(null);
                 setPhantomObjectRotation(0);
+                setOriginalDraggedItemKey(null); // Not dragging an existing furniture item
 
                 if (selectedTool === TOOL_TYPES.paint && hoveredCell) {
                     const key = getKey(hoveredCell.x, hoveredCell.z);
@@ -1516,8 +2186,26 @@ export default function Edit() {
                 }
                 domEvent.stopPropagation();
                 return;
+            } else if (furniture[clickedKey] && (furniture[clickedKey].type !== 'door' && furniture[clickedKey].type !== 'window')) {
+                // User clicked on an existing furniture item to drag it
+                const itemToDrag = furniture[clickedKey];
+                setIsDragging(true);
+                setDraggedType(TOOL_TYPES.furniture);
+                setDraggedSubType(itemToDrag.type);
+                setPhantomObjectRotation(itemToDrag.rotation || 0);
+                setPhantomObjectPosition({ x: clickedX, z: clickedZ }); // Initialize phantom position
+                setOriginalDraggedItemKey(clickedKey); // Store the key of the original item
+
+                // Temporarily remove the item from the scene so it doesn't render twice
+                setFurniture((prev) => {
+                    const newFurniture = { ...prev };
+                    delete newFurniture[clickedKey];
+                    return newFurniture;
+                });
+                domEvent.stopPropagation();
+                return;
             }
-        }, [isDragging, selectedTool, setIsDragging, setDraggedType, setDraggedSubType, setPhantomObjectRotation, hoveredCell, floorTiles, furniture, selectedColor, getKey, setFloorTiles, setFurniture]);
+        }, [isDragging, selectedTool, setIsDragging, setDraggedType, setDraggedSubType, setPhantomObjectRotation, hoveredCell, floorTiles, furniture, selectedColor, getKey, setFloorTiles, setFurniture, getIntersectionPoint, setOriginalDraggedItemKey]);
 
         const handlePointerMove = useCallback((e) => {
             const domEvent = e.nativeEvent || e;
@@ -1525,12 +2213,18 @@ export default function Edit() {
 
             if (intersectionPoint) {
                 const newHoveredCell = { x: Math.round(intersectionPoint.x), z: Math.round(intersectionPoint.z) };
-                setHoveredCell(newHoveredCell);
+                // Only update if the hovered cell actually changed
+                if (!hoveredCell || newHoveredCell.x !== hoveredCell.x || newHoveredCell.z !== hoveredCell.z) {
+                    setHoveredCell(newHoveredCell);
+                }
 
                 if (isDragging && draggedType) {
                     const snappedX = Math.round(intersectionPoint.x);
                     const snappedZ = Math.round(intersectionPoint.z);
-                    setPhantomObjectPosition({ x: snappedX, z: snappedZ });
+                    // Only update if phantom position actually changed
+                    if (!phantomObjectPosition || snappedX !== phantomObjectPosition.x || snappedZ !== phantomObjectPosition.z) {
+                        setPhantomObjectPosition({ x: snappedX, z: snappedZ });
+                    }
 
                     if (draggedType === TOOL_TYPES.paint) {
                         const key = getKey(newHoveredCell.x, newHoveredCell.z);
@@ -1548,13 +2242,15 @@ export default function Edit() {
                     }
                 }
             } else {
-                setHoveredCell(null);
-                if (isDragging && draggedType) {
+                if (hoveredCell) { // Only clear if it was previously set
+                    setHoveredCell(null);
+                }
+                if (isDragging && draggedType && phantomObjectPosition) { // Only clear if it was previously set
                     setPhantomObjectPosition(null);
                 }
             }
             domEvent.stopPropagation();
-        }, [isDragging, draggedType, setHoveredCell, setPhantomObjectPosition, floorTiles, furniture, selectedColor, getKey, setFloorTiles, setFurniture, getIntersectionPoint]);
+        }, [isDragging, draggedType, hoveredCell, phantomObjectPosition, floorTiles, furniture, selectedColor, getKey, setFloorTiles, setFurniture, getIntersectionPoint]);
 
         useEffect(() => {
             const handleGlobalPointerUp = (e) => {
@@ -1562,6 +2258,10 @@ export default function Edit() {
                     const finalX = Math.round(phantomObjectPosition.x);
                     const finalZ = Math.round(phantomObjectPosition.z);
                     const key = getKey(finalX, finalZ);
+
+                    // Determine if placement is valid
+                    const isPlacementValid = floorTiles[key] &&
+                        (!furniture[key] || (furniture[key].type === 'door' || furniture[key].type === 'window'));
 
                     if (draggedType === TOOL_TYPES.floor) {
                         setFloorTiles((prev) => ({ ...prev, [key]: selectedColor }));
@@ -1584,8 +2284,7 @@ export default function Edit() {
                             }
                         }
                     } else if (draggedType === TOOL_TYPES.furniture) {
-                        if (floorTiles[key]) {
-                            const existingFurniture = furniture[key];
+                        if (isPlacementValid) {
                             let phantomDimensions = null;
                             for (const category in FURNITURE_CATEGORIES) {
                                 const found = FURNITURE_CATEGORIES[category].find(item => item.type === draggedSubType);
@@ -1595,42 +2294,95 @@ export default function Edit() {
                                 }
                             }
 
-                            if (existingFurniture && existingFurniture.type !== 'door' && existingFurniture.type !== 'window') {
-                                console.warn(`Неможливо розмістити меблі, інші меблі існують за адресою ${key}`);
-                            } else {
-                                const newFurniture = {
-                                    type: draggedSubType,
-                                    color: selectedColor,
-                                    rotation: phantomObjectRotation,
-                                    offsetX: 0,
-                                    offsetZ: 0,
-                                    isSnapped: false,
-                                    dimensions: phantomDimensions
-                                };
-                                setFurniture((prev) => ({ ...prev, [key]: newFurniture }));
+                            const newFurniture = {
+                                type: draggedSubType,
+                                color: selectedColor,
+                                rotation: phantomObjectRotation,
+                                offsetX: 0,
+                                offsetZ: 0,
+                                isSnapped: false,
+                                dimensions: phantomDimensions,
+                                neighborLeft: false, // Initialize neighbor flags
+                                neighborRight: false,
+                                neighborFront: false,
+                                neighborBack: false,
+                            };
 
-                                if (draggedSubType === 'door' || draggedSubType === 'window') {
-                                    setWalls((prev) => ({ ...prev, [key]: { color: selectedColor, hasOpening: true, rotation: phantomObjectRotation } }));
-                                } else {
-                                    setWalls((prev) => {
-                                        const copy = { ...prev };
-                                        if (copy[key] && !copy[key].hasOpening) {
-                                            delete copy[key];
+                            setFurniture((prev) => {
+                                let updated = { ...prev, [key]: newFurniture };
+                                if (draggedSubType === 'window') {
+                                    // Update the newly placed window and its neighbors
+                                    updated = updateNeighboringWindows(finalX, finalZ, updated);
+                                    // Also update its neighbors
+                                    const neighborsToRecheck = [
+                                        getKey(finalX - 1, finalZ), getKey(finalX + 1, finalZ),
+                                        getKey(finalX, finalZ - 1), getKey(finalX, finalZ + 1),
+                                    ];
+                                    neighborsToRecheck.forEach(nKey => {
+                                        if (updated[nKey] && updated[nKey].type === 'window') {
+                                            updated = updateNeighboringWindows(parseInt(nKey.split(',')[0]), parseInt(nKey.split(',')[1]), updated);
                                         }
-                                        return copy;
                                     });
                                 }
-                                checkGridExpansion(finalX, finalZ);
+                                return updated;
+                            });
+
+                            if (draggedSubType === 'door' || draggedSubType === 'window') {
+                                setWalls((prev) => ({ ...prev, [key]: { color: selectedColor, hasOpening: true, rotation: phantomObjectRotation } }));
+                            } else {
+                                setWalls((prev) => {
+                                    const copy = { ...prev };
+                                    if (copy[key] && !copy[key].hasOpening) {
+                                        delete copy[key];
+                                    }
+                                    return copy;
+                                });
                             }
+                            checkGridExpansion(finalX, finalZ);
+                        } else {
+                            // If placement is invalid, revert the dragged item to its original position if it was an existing item
+                            if (originalDraggedItemKey && furniture[originalDraggedItemKey] === undefined) {
+                                setFurniture((prev) => ({ ...prev, [originalDraggedItemKey]: {
+                                        type: draggedSubType,
+                                        color: selectedColor, // Use current selected color for consistency if it changed during drag
+                                        rotation: phantomObjectRotation,
+                                        offsetX: 0, // Revert to original offsets
+                                        offsetZ: 0,
+                                        isSnapped: false,
+                                        dimensions: FURNITURE_CATEGORIES[Object.keys(FURNITURE_CATEGORIES).find(cat => FURNITURE_CATEGORIES[cat].some(item => item.type === draggedSubType))].find(item => item.type === draggedSubType).dimensions,
+                                        neighborLeft: false,
+                                        neighborRight: false,
+                                        neighborFront: false,
+                                        neighborBack: false,
+                                    }}));
+                            }
+                            console.warn(`Неможливо розмістити меблі за адресою ${key}.`);
                         }
                     }
+                } else if (originalDraggedItemKey && furniture[originalDraggedItemKey] === undefined) {
+                    // If pointerup happened outside a valid intersection point, and it was an existing item being dragged, revert it
+                    setFurniture((prev) => ({ ...prev, [originalDraggedItemKey]: {
+                            type: draggedSubType,
+                            color: selectedColor,
+                            rotation: phantomObjectRotation,
+                            offsetX: 0,
+                            offsetZ: 0,
+                            isSnapped: false,
+                            dimensions: FURNITURE_CATEGORIES[Object.keys(FURNITURE_CATEGORIES).find(cat => FURNITURE_CATEGORIES[cat].some(item => item.type === draggedSubType))].find(item => item.type === draggedSubType).dimensions,
+                            neighborLeft: false,
+                            neighborRight: false,
+                            neighborFront: false,
+                            neighborBack: false,
+                        }}));
                 }
+
 
                 setIsDragging(false);
                 setDraggedType(null);
                 setDraggedSubType(null);
                 setPhantomObjectPosition(null);
                 setPhantomObjectRotation(0);
+                setOriginalDraggedItemKey(null); // Clear original key
             };
 
             const currentCanvas = gl.domElement;
@@ -1642,41 +2394,63 @@ export default function Edit() {
                     currentCanvas.removeEventListener('pointerup', handleGlobalPointerUp);
                 }
             };
-        }, [isDragging, draggedType, draggedSubType, phantomObjectPosition, getKey, floorTiles, furniture, walls, setFurniture, setWalls, setFloorTiles, selectedColor, phantomObjectRotation, setIsDragging, setDraggedType, setDraggedSubType, setPhantomObjectPosition, setPhantomObjectRotation, checkGridExpansion, gl]);
+        }, [isDragging, draggedType, draggedSubType, phantomObjectPosition, getKey, floorTiles, furniture, walls, setFurniture, setWalls, setFloorTiles, selectedColor, phantomObjectRotation, setIsDragging, setDraggedType, setDraggedSubType, setPhantomObjectPosition, setPhantomObjectRotation, checkGridExpansion, gl, updateNeighboringWindows, originalDraggedItemKey]);
 
-        const renderComponent = useCallback((data, isPhantom = false) => {
-            const { type: itemType, color, rotation = 0 } = data;
+        const renderComponent = useCallback((data, isPhantom = false, isPlacementValid = true) => {
+            const { type: itemType, color, rotation = 0, neighborLeft, neighborRight, neighborFront, neighborBack } = data;
             const isHighlighted = !isPhantom && hoveredCell &&
                 Math.round(data.position.x) === hoveredCell.x &&
                 Math.round(data.position.z) === hoveredCell.z;
 
+            // Choose material based on phantom status and placement validity
+            const currentPhantomMaterial = isPhantom && !isPlacementValid ? invalidPhantomMaterial : phantomMaterial;
+
             switch (itemType) {
-                case 'chair': return <Chair color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'outdoorChair': return <OutdoorChair color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'table': return <Table color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'kitchenTable': return <KitchenTable color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'outdoorTable': return <OutdoorTable color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'sofa': return <Sofa color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'bed': return <Bed color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'lamp': return <Lamp color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'cabinet': return <Cabinet color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'kitchenCabinet': return <KitchenCabinet color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'door': return <Door color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'window': return <Window color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'tv': return <TV color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'console': return <Console color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'computerSetup': return <ComputerSetup color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'ceilingLamp': return <CeilingLamp color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'spotlight': return <Spotlight color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'rgbStrip': return <RgbStrip color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'pottedPlant': return <PottedPlant color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case 'tallPlant': return <TallPlant color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} />;
-                case TOOL_TYPES.floor: return <FloorPhantom />;
+                case 'sofa': return <Sofa color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'chair': return <Chair color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'table': return <Table color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'coffeeTable': return <CoffeeTable color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'bookshelf': return <Bookshelf color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'armchair': return <Armchair color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'fireplace': return <Fireplace color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'door': return <Door color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'window': return <Window color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} neighborLeft={neighborLeft} neighborRight={neighborRight} neighborFront={neighborFront} neighborBack={neighborBack} phantomMaterial={currentPhantomMaterial} />;
+                case 'kitchenTable': return <KitchenTable color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'kitchenCabinet': return <KitchenCabinet color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'outdoorChair': return <OutdoorChair color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'outdoorTable': return <OutdoorTable color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'grill': return <Grill color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'gardenBench': return <GardenBench color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'bed': return <Bed color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'lamp': return <Lamp color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'cabinet': return <Cabinet color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'dresser': return <Dresser color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'nightstand': return <Nightstand color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'wardrobe': return <Wardrobe color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'tv': return <TV color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'console': return <Console color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'computerSetup': return <ComputerSetup color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'ceilingLamp': return <CeilingLamp color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'spotlight': return <Spotlight color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'rgbStrip': return <RgbStrip color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'pottedPlant': return <PottedPlant color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'tallPlant': return <TallPlant color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'toilet': return <Toilet color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'sink': return <Sink color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'bathtub': return <Bathtub color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'shower': return <Shower color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'desk': return <Desk color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'officeChair': return <OfficeChair color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'filingCabinet': return <FilingCabinet color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                // Removed 'painting' case
+                case 'diningTable': return <DiningTable color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case 'diningChair': return <DiningChair color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} phantomMaterial={currentPhantomMaterial} />;
+                case TOOL_TYPES.floor: return <FloorPhantom phantomMaterial={currentPhantomMaterial} />;
                 case TOOL_TYPES.wall:
                     const potentialOpening = hoveredCell && furniture[getKey(hoveredCell.x, hoveredCell.z)] &&
                         (furniture[getKey(hoveredCell.x, hoveredCell.z)].type === 'door' ||
                             furniture[getKey(hoveredCell.x, hoveredCell.z)].type === 'window');
-                    return <WallPhantom hasOpening={potentialOpening} />;
+                    return <WallPhantom hasOpening={potentialOpening} phantomMaterial={currentPhantomMaterial} />;
                 default: return null;
             }
         }, [hoveredCell, furniture, getKey]);
@@ -1731,27 +2505,38 @@ export default function Edit() {
                     }
 
                     if (furnitureData) {
-                        const positionX = x + (furnitureData.offsetX || 0);
-                        const positionZ = z + (furnitureData.offsetZ || 0);
+                        // Only render if it's not the item currently being dragged
+                        if (originalDraggedItemKey !== key) {
+                            const positionX = x + (furnitureData.offsetX || 0);
+                            const positionZ = z + (furnitureData.offsetZ || 0);
 
-                        items.push(
-                            <group
-                                key={`furniture-${x}-${z}`}
-                                position={[positionX, FLOOR_LEVEL, positionZ]}
-                                onPointerDown={handlePointerDown}
-                                onPointerMove={handlePointerMove}
-                                onContextMenu={(e) => handleRightClick(e, x, z)}
-                            >
-                                {renderComponent({ ...furnitureData, position: { x: positionX, z: positionZ } })}
-                            </group>
-                        );
+                            items.push(
+                                <group
+                                    key={`furniture-${x}-${z}`}
+                                    position={[positionX, FLOOR_LEVEL, positionZ]}
+                                    onPointerDown={handlePointerDown}
+                                    onPointerMove={handlePointerMove}
+                                    onContextMenu={(e) => handleRightClick(e, x, z)}
+                                >
+                                    {renderComponent({ ...furnitureData, position: { x: positionX, z: positionZ } })}
+                                </group>
+                            );
+                        }
                     }
                 }
             }
             return items;
         }, [
-            gridSize, getKey, floorTiles, walls, furniture, renderComponent, hoveredCell, handlePointerDown, handlePointerMove, handleRightClick
+            gridSize, getKey, floorTiles, walls, furniture, renderComponent, hoveredCell, handlePointerDown, handlePointerMove, handleRightClick, originalDraggedItemKey
         ]);
+
+        const isPhantomPlacementValid = useMemo(() => {
+            if (!phantomObjectPosition) return false;
+            const key = getKey(phantomObjectPosition.x, phantomObjectPosition.z);
+            return floorTiles[key] &&
+                (!furniture[key] || (furniture[key].type === 'door' || furniture[key].type === 'window'));
+        }, [phantomObjectPosition, floorTiles, furniture, getKey]);
+
 
         return (
             <>
@@ -1767,7 +2552,7 @@ export default function Edit() {
                 )}
                 {isDragging && draggedType && phantomObjectPosition && draggedType !== TOOL_TYPES.paint && (
                     <group position={[phantomObjectPosition.x, FLOOR_LEVEL, phantomObjectPosition.z]}>
-                        {renderComponent({ type: draggedType === TOOL_TYPES.furniture ? draggedSubType : draggedType, color: selectedColor, rotation: phantomObjectRotation }, true)}
+                        {renderComponent({ type: draggedType === TOOL_TYPES.furniture ? draggedSubType : draggedType, color: selectedColor, rotation: phantomObjectRotation }, true, isPhantomPlacementValid)}
                     </group>
                 )}
 
@@ -1798,8 +2583,27 @@ export default function Edit() {
         setIsDragging(true);
         setDraggedType(TOOL_TYPES.furniture);
         setDraggedSubType(type);
-        setPhantomObjectRotation(0);
+        // Set initial rotation for painting to 180 degrees (Math.PI)
+        setPhantomObjectRotation(type === 'painting' ? Math.PI : 0);
+        setOriginalDraggedItemKey(null); // When dragging from inventory, no original key
     }, []);
+
+    const handleToolToggle = useCallback((toolLabel) => {
+        if (selectedTool === toolLabel) {
+            // If the same tool is clicked again, deactivate it
+            setSelectedTool(null);
+        } else {
+            // Otherwise, activate the new tool
+            setSelectedTool(toolLabel);
+        }
+        // Always reset dragging state when a tool button is clicked
+        setIsDragging(false);
+        setDraggedType(null);
+        setDraggedSubType(null);
+        setPhantomObjectPosition(null);
+        setPhantomObjectRotation(0);
+        setOriginalDraggedItemKey(null);
+    }, [selectedTool]);
 
     const handleColorInput = useCallback((e) => {
         setSelectedColor(e.target.value);
@@ -2102,8 +2906,27 @@ export default function Edit() {
                         mobileMovementInput={mobileMovementInput}
                         cameraRotationInput={cameraRotationInput}
                         cameraVerticalInput={cameraVerticalInput}
+                        updateNeighboringWindows={updateNeighboringWindows}
+                        setOriginalDraggedItemKey={setOriginalDraggedItemKey}
+                        originalDraggedItemKey={originalDraggedItemKey}
                     />
                 </Canvas>
+                {/* New position for the tutorial button */}
+                <div style={{
+                    position: 'absolute',
+                    top: '20px',
+                    right: '20px',
+                    zIndex: 1000,
+                }}>
+                    <HoverButton
+                        onClick={() => setShowTutorial(true)}
+                        style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em' }}
+                        hoverStyle={styles.tutorialButtonHover}
+                    >
+                        Показати туторіал
+                    </HoverButton>
+                </div>
+
                 {isMobile && (
                     <>
                         <div style={{
@@ -2332,21 +3155,16 @@ export default function Edit() {
                     </>
                 )}
             </div>
-            <div style={styles.inventoryPanel}>
+            <div
+                style={styles.inventoryPanel}
+            >
                 <div style={styles.inventorySection}>
                     <h3 style={styles.inventoryTitle}>Інструменти</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {Object.entries(TOOL_TYPES).filter(([, label]) => label !== 'Меблі').map(([key, label]) => (
                             <HoverButton
                                 key={label}
-                                onClick={() => {
-                                    setSelectedTool(label);
-                                    setIsDragging(false);
-                                    setDraggedType(null);
-                                    setDraggedSubType(null);
-                                    setPhantomObjectPosition(null);
-                                    setPhantomObjectRotation(0);
-                                }}
+                                onClick={() => handleToolToggle(label)}
                                 style={{
                                     ...styles.buttonBase,
                                     ...(selectedTool === label ? styles.toolButtonActive : styles.toolButtonInactive),
@@ -2443,7 +3261,6 @@ export default function Edit() {
                     >
                         Очистити все
                     </HoverButton>
-
                     <HoverButton
                         onClick={() => {
                             setModalContent({
