@@ -88,10 +88,10 @@ const styles = {
         color: 'var(--text-color-light)',
         padding: '15px',
         display: 'flex',
-        flexWrap: 'wrap',
+        flexWrap: 'nowrap', // Изменено с 'wrap' на 'nowrap'
         gap: '20px',
-        overflowX: 'hidden',
-        overflowY: 'auto',
+        overflowX: 'auto', // Изменено с 'hidden' на 'auto' для прокрутки
+        overflowY: 'hidden', // Изменено с 'auto' на 'hidden'
         maxHeight: '280px',
         borderTop: '1px solid rgba(75, 85, 99, 0.5)',
         boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.3)',
@@ -224,6 +224,7 @@ const styles = {
         transform: 'translateY(-2px)',
     }
 };
+
 
 const HoverButton = ({ children, style, hoverStyle, onClick }) => {
     const [isHovered, setIsHovered] = useState(false);
