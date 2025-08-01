@@ -16,28 +16,28 @@
   left: -80%;
   width: 260%;
   height: 260%;
-  background:
-          radial-gradient(circle 50px at 5% 10%, var(--accent) 99%, transparent 100%),
-          radial-gradient(circle 45px at 12% 35%, var(--primary-dark) 99%, transparent 100%),
-          radial-gradient(circle 60px at 20% 65%, var(--primary-darker) 99%, transparent 100%),
-          radial-gradient(circle 38px at 32% 20%, var(--accent) 99%, transparent 100%),
-          radial-gradient(circle 42px at 40% 50%, var(--primary-dark) 99%, transparent 100%),
-          radial-gradient(circle 30px at 52% 10%, var(--primary-darker) 99%, transparent 100%),
-          radial-gradient(circle 58px at 62% 40%, var(--accent) 99%, transparent 100%),
-          radial-gradient(circle 36px at 72% 75%, var(--primary-dark) 99%, transparent 100%),
-          radial-gradient(circle 42px at 85% 25%, var(--primary-darker) 99%, transparent 100%),
-          radial-gradient(circle 60px at 92% 60%, var(--accent) 99%, transparent 100%),
-          radial-gradient(circle 50px at 80% 10%, var(--primary-dark) 99%, transparent 100%),
-          radial-gradient(circle 40px at 25% 85%, var(--primary-darker) 99%, transparent 100%),
-          radial-gradient(circle 36px at 15% 75%, var(--accent) 99%, transparent 100%),
-          radial-gradient(circle 42px at 45% 80%, var(--primary-dark) 99%, transparent 100%),
-          radial-gradient(circle 48px at 68% 22%, var(--primary-darker) 99%, transparent 100%),
-          radial-gradient(circle 52px at 88% 45%, var(--accent) 99%, transparent 100%),
-          radial-gradient(circle 46px at 30% 10%, var(--primary-dark) 99%, transparent 100%),
-          radial-gradient(circle 55px at 60% 70%, var(--primary-darker) 99%, transparent 100%),
-          radial-gradient(circle 50px at 75% 15%, var(--accent) 99%, transparent 100%),
-          radial-gradient(circle 42px at 10% 55%, var(--primary-dark) 99%, transparent 100%);
-  animation: moveCircles 25s linear infinite;
+  /*background:*/
+  /*        radial-gradient(circle 50px at 5% 10%, var(--accent) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 45px at 12% 35%, var(--primary-dark) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 60px at 20% 65%, var(--primary-darker) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 38px at 32% 20%, var(--accent) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 42px at 40% 50%, var(--primary-dark) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 30px at 52% 10%, var(--primary-darker) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 58px at 62% 40%, var(--accent) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 36px at 72% 75%, var(--primary-dark) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 42px at 85% 25%, var(--primary-darker) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 60px at 92% 60%, var(--accent) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 50px at 80% 10%, var(--primary-dark) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 40px at 25% 85%, var(--primary-darker) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 36px at 15% 75%, var(--accent) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 42px at 45% 80%, var(--primary-dark) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 48px at 68% 22%, var(--primary-darker) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 52px at 88% 45%, var(--accent) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 46px at 30% 10%, var(--primary-dark) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 55px at 60% 70%, var(--primary-darker) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 50px at 75% 15%, var(--accent) 99%, transparent 100%),*/
+  /*        radial-gradient(circle 42px at 10% 55%, var(--primary-dark) 99%, transparent 100%);*/
+  /*animation: moveCircles 25s linear infinite;*/
   z-index: 0;
   opacity: 0.7;
   pointer-events: none;
@@ -206,9 +206,7 @@
     font-size: 15px;
   }
 
-  /*.profile__buttons {*/
-  /*  max-width: 90vw;*/
-  /*}*/
+
 
   .profile__change,
   .profile__delete,
