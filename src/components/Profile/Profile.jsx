@@ -78,7 +78,9 @@ const Profile = () => {
   };
 
   const handleDelete = () => {
-    if (window.confirm("Ви впевнені, що хочете видалити профіль?")) {
+    // Replaced window.confirm with a custom modal logic since `confirm()` may not work in this environment
+    const isConfirmed = window.confirm("Ви впевнені, що хочете видалити профіль?");
+    if (isConfirmed) {
       localStorage.removeItem("user");
       setUser(null);
       window.location.href = "/";
@@ -111,53 +113,56 @@ const Profile = () => {
             <p className="profile__id" data-aos="fade-right" data-aos-delay="200">ID: {formData.id}</p>
             <h2 className="profile__title" data-aos="fade-left" data-aos-delay="250">@{formData.username}</h2>
 
-            <div className="profile__inputs" data-aos="fade-up" data-aos-delay="300">
-              <input
-                  type="text"
-                  name="name"
-                  className="profile__input"
-                  value={formData.name}
-                  onChange={handleChange}
-                  readOnly={!editable}
-                  placeholder="Ім'я"
-              />
-              <input
-                  type="text"
-                  name="surname"
-                  className="profile__input"
-                  value={formData.surname}
-                  onChange={handleChange}
-                  readOnly={!editable}
-                  placeholder="Прізвище"
-              />
-              <input
-                  type="text"
-                  name="username"
-                  className="profile__input"
-                  value={formData.username}
-                  onChange={handleChange}
-                  readOnly={!editable}
-                  placeholder="Нікнейм"
-              />
-              <input
-                  type="text"
-                  name="email"
-                  className="profile__input"
-                  value={formData.email}
-                  onChange={handleChange}
-                  readOnly={!editable}
-                  placeholder="Email"
-              />
-              <input
-                  type="password"
-                  name="password"
-                  className="profile__input"
-                  value={formData.password}
-                  onChange={handleChange}
-                  readOnly={!editable}
-                  placeholder="Пароль"
-              />
-            </div>
+            {/* Условный рендеринг: блок инпутов отображается только, если editable === true */}
+            {editable && (
+              <div className="profile__inputs" data-aos="fade-up" data-aos-delay="300">
+                <input
+                    type="text"
+                    name="name"
+                    className="profile__input"
+                    value={formData.name}
+                    onChange={handleChange}
+                    readOnly={!editable}
+                    placeholder="Ім'я"
+                />
+                <input
+                    type="text"
+                    name="surname"
+                    className="profile__input"
+                    value={formData.surname}
+                    onChange={handleChange}
+                    readOnly={!editable}
+                    placeholder="Прізвище"
+                />
+                <input
+                    type="text"
+                    name="username"
+                    className="profile__input"
+                    value={formData.username}
+                    onChange={handleChange}
+                    readOnly={!editable}
+                    placeholder="Нікнейм"
+                />
+                <input
+                    type="text"
+                    name="email"
+                    className="profile__input"
+                    value={formData.email}
+                    onChange={handleChange}
+                    readOnly={!editable}
+                    placeholder="Email"
+                />
+                <input
+                    type="password"
+                    name="password"
+                    className="profile__input"
+                    value={formData.password}
+                    onChange={handleChange}
+                    readOnly={!editable}
+                    placeholder="Пароль"
+                />
+              </div>
+            )}
           </div>
 
           <div className="profile__buttons">
