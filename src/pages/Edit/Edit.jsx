@@ -1389,7 +1389,14 @@ const PottedPlant = React.memo(({ color = "#2E8B57", rotation = 0, isHighlighted
         new MeshStandardMaterial({
             color: "#8B4513",
             roughness: 0.6,
-            metalness: 0.3
+            metalness: 0.2,
+        }), []);
+
+    const soilMaterial = useMemo(() =>
+        new MeshStandardMaterial({
+            color: "#3B2F2F",
+            roughness: 1,
+            metalness: 0,
         }), []);
 
     const plantMaterial = useMemo(() =>
@@ -1403,46 +1410,48 @@ const PottedPlant = React.memo(({ color = "#2E8B57", rotation = 0, isHighlighted
         new MeshStandardMaterial({
             color,
             roughness: 0.7,
-            metalness: 0,
+            metalness: 0.1,
         }), [color]);
 
-    const Leaf = ({ position, rotation }) => (
-        <>
-            <mesh position={position} rotation={rotation} material={isPhantom ? phantomMaterial : leafMaterial}>
-                <planeGeometry args={[0.15, 0.3]} />
-            </mesh>
-            <mesh
-                position={position}
-                rotation={[rotation[0], rotation[1] + Math.PI, rotation[2]]}
-                material={isPhantom ? phantomMaterial : leafMaterial}
-            >
-                <planeGeometry args={[0.15, 0.3]} />
-            </mesh>
-        </>
+    const Leaf = ({ position, rotation, scale = [1, 1, 1] }) => (
+        <mesh
+            position={position}
+            rotation={rotation}
+            scale={scale}
+            material={isPhantom ? phantomMaterial : leafMaterial}
+        >
+            <sphereGeometry args={[0.12, 8, 4, 0, Math.PI, 0, Math.PI / 2]} />
+        </mesh>
     );
 
     return (
-        <group rotation={[0, rotation, 0]} position={[0, 0, 0]}>
+        <group rotation={[0, rotation, 0]}>
             <mesh position={[0, 0.15, 0]} material={isPhantom ? phantomMaterial : potMaterial}>
-                <cylinderGeometry args={[0.2, 0.25, 0.3, 32, 1, true]} />
+                <cylinderGeometry args={[0.18, 0.22, 0.3, 32]} />
             </mesh>
             <mesh position={[0, 0.3, 0]} material={isPhantom ? phantomMaterial : potMaterial}>
-                <circleGeometry args={[0.2, 32]} />
+                <cylinderGeometry args={[0.2, 0.2, 0.02, 32]} />
             </mesh>
-
+            <mesh
+                position={[0, 0.32, 0]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                material={isPhantom ? phantomMaterial : soilMaterial}
+            >
+                <circleGeometry args={[0.17, 32]} />
+            </mesh>
             <mesh position={[0, 0.5, 0]} material={isPhantom ? phantomMaterial : plantMaterial}>
-                <cylinderGeometry args={[0.04, 0.05, 0.4, 12]} />
+                <cylinderGeometry args={[0.03, 0.04, 0.4, 12]} />
             </mesh>
-
-            <Leaf position={[0.1, 0.75, 0]} rotation={[0, 0, Math.PI / 6]} />
-            <Leaf position={[-0.1, 0.7, 0.05]} rotation={[0, Math.PI / 8, -Math.PI / 4]} />
-            <Leaf position={[0.05, 0.85, -0.1]} rotation={[Math.PI / 6, 0, Math.PI / 5]} />
-            <Leaf position={[-0.08, 0.9, 0]} rotation={[0, 0, -Math.PI / 8]} />
-
+            <Leaf position={[0.1, 0.7, 0]} rotation={[0.2, 0.2, 0]} />
+            <Leaf position={[-0.1, 0.72, 0.05]} rotation={[-0.3, 0.4, 0.2]} scale={[0.9, 0.9, 0.9]} />
+            <Leaf position={[0.05, 0.8, -0.1]} rotation={[0.4, -0.1, -0.3]} />
+            <Leaf position={[-0.08, 0.85, 0]} rotation={[0, 0.3, -0.4]} />
+            <Leaf position={[0, 0.88, 0.08]} rotation={[-0.2, -0.1, 0.3]} scale={[0.85, 0.85, 0.85]} />
             {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
         </group>
     );
 });
+
 
 const TallPlant = React.memo(({ color = "#3CB371", rotation = 0, isHighlighted, isPhantom }) => {
     const potMaterial = useMemo(() =>
