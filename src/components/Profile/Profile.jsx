@@ -178,9 +178,9 @@ const Profile = () => {
                     readOnly={!editable}
                     placeholder="Email"
                 />
-                <div className="password-wrapper">
+               
                   <input
-                      type={showPassword ? "text" : "password"}
+                      type="text"
                       name="password"
                       className="profile__input"
                       value={formData.password}
@@ -188,15 +188,14 @@ const Profile = () => {
                       readOnly={!editable}
                       placeholder="Пароль"
                   />
-                  <button
+                  {/* <button
                       type="button"
                       className="password-toggle"
                       onClick={togglePasswordVisibility}
                   >
                       {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </button>
+                  </button> */}
                 </div>
-              </div>
             )}
           </div>
 

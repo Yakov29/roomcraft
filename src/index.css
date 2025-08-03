@@ -44,7 +44,6 @@ a {
 }
 
 
-
 .message-box {
   position: fixed;
   top: 100px;
@@ -60,6 +59,8 @@ a {
   z-index: 1000;
   min-width: 300px;
   text-align: left;
+  max-width: 90%;
+  box-sizing: border-box;
 }
 
 .message-box p {
@@ -78,4 +79,31 @@ a {
   font-size: 24px;
   cursor: pointer;
   line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .message-box {
+    top: 20px;
+    left: 10px;
+    right: 10px;
+    transform: none;
+    min-width: auto;
+    width: auto;
+    padding: 15px 20px;
+    flex-direction: column;
+    text-align: center;
+    max-width: none;
+  }
+  
+  .message-box p {
+    font-size: 14px;
+    margin-right: 0;
+  }
+  
+  .message-box__close {
+    position: static;
+    transform: none;
+    margin-top: 10px;
+    font-size: 20px;
+  }
 }
