@@ -62,9 +62,11 @@
   0% {
     transform: translate(0, 0) rotate(0deg);
   }
+
   50% {
     transform: translate(30px, 20px) rotate(180deg);
   }
+
   100% {
     transform: translate(0, 0) rotate(360deg);
   }
@@ -113,10 +115,11 @@
 }
 
 .required-star {
-    color: var(--accent);
-    font-size: 1.2em;
-    font-weight: bold;
+  color: var(--accent);
+  font-size: 1.2em;
+  font-weight: bold;
 }
+
 .register__input {
   width: 100%;
   padding: 16px 22px;
@@ -146,8 +149,9 @@
   color: var(--text-color-muted);
   opacity: 0.75;
 }
+
 .register__error {
-  color: #f87171; 
+  color: #f87171;
   font-size: 0.85rem;
   margin-top: 6px;
   font-weight: 500;
@@ -228,6 +232,34 @@
   transform: translateY(-2px);
   box-shadow: 0 6px 15px rgba(27, 116, 228, 0.4);
 }
+
+.password-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 15px;
+  bottom: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-toggle svg {
+  width: 24px;
+  height: 24px;
+}
+
+
 
 @media (max-width: 768px) {
   .register__title {

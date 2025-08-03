@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { FaEye, FaEyeSlash } from "react-icons/fa"; // Импортируем иконки из react-icons/fa
 import "./Register.css";
 
 const Register = () => {
@@ -16,6 +17,9 @@ const Register = () => {
     });
 
     const [isFormValid, setIsFormValid] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showRepeatPassword, setShowRepeatPassword] = useState(false);
+    const [message, setMessage] = useState(null);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -38,15 +42,33 @@ const Register = () => {
     };
 
     useEffect(() => {
+        // Проверка обязательных полей
         const requiredFields = ["name", "surname", "username", "email", "password", "repeat"];
         const allFilled = requiredFields.every(field => formData[field].trim() !== "");
+        
+        // Проверка совпадения паролей
         const passwordsMatch = formData.password === formData.repeat;
-        setIsFormValid(allFilled && passwordsMatch);
+        
+        // Проверка длины пароля (минимум 6 символов)
+        const isPasswordLongEnough = formData.password.length >= 6;
+        
+        // Проверка, что пароль содержит только английские символы и цифры
+        const isPasswordEnglish = /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/.test(formData.password);
+
+        setIsFormValid(allFilled && passwordsMatch && isPasswordLongEnough && isPasswordEnglish);
     }, [formData]);
 
     const handleRegister = () => {
         if (!isFormValid) {
-            alert("Будь ласка, заповніть усі обов'язкові поля та переконайтеся, що паролі співпадають.");
+            let errorMessage = "Будь ласка, заповніть усі обов'язкові поля.";
+            if (formData.password !== formData.repeat) {
+              errorMessage = "Паролі повинні співпадати.";
+            } else if (formData.password.length < 6) {
+              errorMessage = "Пароль повинен бути мінімум 6 символів.";
+            } else if (!/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]*$/.test(formData.password)) {
+              errorMessage = "Пароль повинен містити тільки англійські символи.";
+            }
+            setMessage(errorMessage);
             return;
         }
 
@@ -71,8 +93,24 @@ const Register = () => {
         document.location.reload();
     };
 
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
+    };
+
+    const toggleRepeatPasswordVisibility = () => {
+        setShowRepeatPassword(!showRepeatPassword);
+    };
+
     return (
         <section className="register">
+            {message && (
+                <div className="message-box">
+                    <p>{message}</p>
+                    <button className="message-box__close" onClick={() => setMessage(null)}>
+                        &times;
+                    </button>
+                </div>
+            )}
             <h2 className="register__title">Приєднуйся до RoomCraft та почни створювати свою кімнату мрії! 🤪</h2>
             <p className="register__description">Створи обліковий запис і отримай доступ до унікального конструктора кімнат...</p>
             <form autoComplete="off">
@@ -126,28 +164,46 @@ const Register = () => {
                         />
                     </li>
                     <li className="register__item">
-                        <p className="register__name">Пароль <span className="required-star">*</span></p>
-                        <input
-                            type="password"
-                            name="password"
-                            className="register__input"
-                            placeholder="Ваш пароль"
-                            onChange={handleChange}
-                            required
-                            autoComplete="new-password"
-                        />
+                        <div className="password-wrapper">
+                            <p className="register__name">Пароль <span className="required-star">*</span></p>
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                name="password"
+                                className="register__input"
+                                placeholder="Ваш пароль"
+                                onChange={handleChange}
+                                required
+                                autoComplete="new-password"
+                            />
+                            <button
+                                type="button"
+                                className="password-toggle"
+                                onClick={togglePasswordVisibility}
+                            >
+                                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                            </button>
+                        </div>
                     </li>
                     <li className="register__item">
-                        <p className="register__name">Повтор паролю <span className="required-star">*</span></p>
-                        <input
-                            type="password"
-                            name="repeat"
-                            className="register__input"
-                            placeholder="Повторіть пароль"
-                            onChange={handleChange}
-                            required
-                            autoComplete="new-password"
-                        />
+                        <div className="password-wrapper">
+                            <p className="register__name">Повтор паролю <span className="required-star">*</span></p>
+                            <input
+                                type={showRepeatPassword ? "text" : "password"}
+                                name="repeat"
+                                className="register__input"
+                                placeholder="Повторіть пароль"
+                                onChange={handleChange}
+                                required
+                                autoComplete="new-password"
+                            />
+                            <button
+                                type="button"
+                                className="password-toggle"
+                                onClick={toggleRepeatPasswordVisibility}
+                            >
+                                {showRepeatPassword ? <FaEyeSlash /> : <FaEye />}
+                            </button>
+                        </div>
                     </li>
                     <li className="register__item">
                         <p className="register__name">Аватар</p>

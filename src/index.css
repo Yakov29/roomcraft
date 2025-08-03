@@ -42,3 +42,40 @@ a {
   text-decoration: none;
   color: inherit;
 }
+
+
+
+.message-box {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ff4d4d;
+  color: white;
+  padding: 15px 40px 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  z-index: 1000;
+  min-width: 300px;
+  text-align: left;
+}
+
+.message-box p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.message-box__close {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+}
