@@ -108,6 +108,13 @@ const Header = () => {
                             Контакти
                         </a>
                     </li>
+                    {user && (
+                        <li className="header__item" data-aos="fade-up" data-aos-delay="375">
+                            <Link to={`/user/${user.id}/rooms`} className="header__link" onClick={closeMenu}>
+                                Редактор
+                            </Link>
+                        </li>
+                    )}
                     <li className="header__item header__item--mobile" data-aos="fade-up" data-aos-delay="400">
                         {user ? (
                             <Link to="/user" onClick={closeMenu}>
