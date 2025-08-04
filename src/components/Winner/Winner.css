@@ -1,0 +1,74 @@
+.winner {
+    position: relative;
+    background-color: #121827;
+    padding-top: 80px;
+    padding-bottom: 80px;
+    text-align: center;
+    overflow: hidden;
+    /*-webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 70%, rgba(0,0,0,0) 100%);*/
+    /*mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 70%, rgba(0,0,0,0) 100%);*/
+}
+
+.winner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0) 70%);
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+    animation: subtleGlow 10s ease-in-out infinite alternate;
+    z-index: 0;
+    opacity: 0.3;
+}
+
+@keyframes subtleGlow {
+    0% {
+        background-position: 0% 50%;
+        filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+    }
+    50% {
+        background-position: 100% 50%;
+        filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.7));
+    }
+    100% {
+        background-position: 0% 50%;
+        filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+    }
+}
+
+.winner__title {
+    position: relative;
+    font-size: 48px;
+    color: #E1E6F0;
+    font-weight: bold;
+    z-index: 1;
+}
+
+.winner__description {
+    position: relative;
+    font-size: 20px;
+    color: #A0AEC0;
+    margin-top: 20px;
+    z-index: 1;
+}
+
+@media (max-width: 768px) {
+    .winner__title {
+        font-size: 36px;
+    }
+    .winner__description {
+        font-size: 18px;
+        margin-top: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .winner__title {
+        font-size: 28px;
+    }
+    .winner__description {
+        font-size: 16px;
+        margin-top: 12px;
+        padding: 0 10px;
+    }
+}
