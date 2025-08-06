@@ -16,7 +16,7 @@ const VideoPlayer = () => {
         <section className="video-player" data-aos="fade-up">
             <Container>
                 <h2 className="video-player__title" data-aos="fade-right">
-                    Нове відео туторіал 📹
+                    Відео туторіал 📹
                 </h2>
                 <div className="video-player__wrapper" data-aos="zoom-in">
                     <div className="video-player__iframe-wrapper">
