@@ -4,7 +4,7 @@ import "./Winner.css"
 
 const Winner = () => {
     return (
-        <section className="winner">
+        <section className="winner" id="winner">
             <Container>
                 <h2 className="winner__title">2-е місце на GameOfTeens 2025! 🥈</h2>
                 <p className="winner__description">

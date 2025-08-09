@@ -99,7 +99,7 @@ const Header = () => {
                         <a href="/" className="header__link" onClick={handleHomeClick}>Головна</a>
                     </li>
                     <li className="header__item" data-aos="fade-up" data-aos-delay="300">
-                        <a href="/#about" className="header__link" onClick={handleAboutClick}>
+                        <a href="/#winner" className="header__link" onClick={handleAboutClick}>
                             Про проєкт
                         </a>
                     </li>
@@ -111,7 +111,7 @@ const Header = () => {
                     {user && (
                         <li className="header__item" data-aos="fade-up" data-aos-delay="375">
                             <Link to={`/user/${user.id}/rooms`} className="header__link" onClick={closeMenu}>
-                                Редактор
+                                Кімнати
                             </Link>
                         </li>
                     )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { Outlines } from '@react-three/drei';
-import { GridHelper, Vector3, MeshStandardMaterial, Raycaster, Plane, Euler, Quaternion, PointLight, SpotLight } from 'three';
+import { Outlines, MeshReflectorMaterial, useDetectGPU, Preload } from '@react-three/drei';
+import { GridHelper, Vector3, MeshStandardMaterial, Raycaster, Plane, Euler, Quaternion, PointLight } from 'three';
 import * as THREE from 'three';
 import { useParams, useNavigate } from 'react-router-dom';
 
@@ -13,6 +13,22 @@ const styles = {
         '--accent': '#2D9CDB',
         '--text-color-light': '#E1E6F0',
         '--text-color-muted': '#A0AEC0',
+    },
+    preloader: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        background: 'var(--background-color)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        color: 'var(--text-color-light)',
+        fontSize: '1.5em',
+        zIndex: 10000,
+        flexDirection: 'column',
+        gap: '20px'
     },
     contextMenu: {
         position: 'fixed',
@@ -49,6 +65,9 @@ const styles = {
         textAlign: 'left',
         fontSize: '1em',
         transition: 'background-color 0.2s ease, color 0.2s ease',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
     },
     contextMenuButtonHover: {
         backgroundColor: 'var(--accent)',
@@ -153,17 +172,11 @@ const styles = {
         boxShadow: '4px 0 14px rgba(0, 0, 0, 0.3)',
         zIndex: 999,
         transition: 'transform 0.3s ease-out',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none',
-        '&::-webkit-scrollbar': {
-            display: 'none',
-        },
     },
     inventorySection: {
         background: 'var(--primary-darker)',
         padding: '16px',
         borderRadius: '12px',
-        // minHeight: '100px',
         boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
         display: 'flex',
         flexDirection: 'column',
@@ -295,12 +308,21 @@ const invalidPhantomMaterial = new MeshStandardMaterial({ color: "#FF0000", tran
 const FURNITURE_CATEGORIES = {
     '🛋️ Меблі': [
         { type: 'sofa', label: 'Диван', dimensions: { width: 1.6, depth: 0.8, height: 0.8 } },
+        { type: 'armchair', label: 'Крісло', dimensions: { width: 0.8, depth: 0.8, height: 0.9 } },
         { type: 'chair', label: 'Стілець', dimensions: { width: 0.6, depth: 0.6, height: 0.8 } },
+        { type: 'barStool', label: 'Барный стул', dimensions: { width: 0.4, depth: 0.4, height: 1.0 } },
+        { type: 'beanBag', label: 'Кресло-мешок', dimensions: { width: 0.8, depth: 0.8, height: 0.6 } },
         { type: 'table', label: 'Стіл', dimensions: { width: 1.0, depth: 0.8, height: 0.8 } },
         { type: 'coffeeTable', label: 'Журнальний стіл', dimensions: { width: 0.8, depth: 0.5, height: 0.4 } },
-        { type: 'bookshelf', label: 'Книжкова шафа', dimensions: { width: 1.0, depth: 0.3, height: 1.8 } },
-        { type: 'armchair', label: 'Крісло', dimensions: { width: 0.8, depth: 0.8, height: 0.9 } },
         { type: 'fireplace', label: 'Камін', dimensions: { width: 1.5, depth: 0.5, height: 1.2 } },
+    ],
+    '🗄️ Зберігання': [
+        { type: 'bookshelf', label: 'Книжкова шафа', dimensions: { width: 1.0, depth: 0.3, height: 1.8 } },
+        { type: 'cabinet', label: 'Шафа', dimensions: { width: 1.0, depth: 0.5, height: 2.0 } },
+        { type: 'wardrobe', label: 'Шафа для одягу', dimensions: { width: 1.5, depth: 0.6, height: 2.2 } },
+        { type: 'dresser', label: 'Комод', dimensions: { width: 1.2, depth: 0.5, height: 0.9 } },
+        { type: 'nightstand', label: 'Тумбочка', dimensions: { width: 0.5, depth: 0.4, height: 0.6 } },
+        { type: 'wallShelf', label: 'Настенная полка', dimensions: { width: 1.2, depth: 0.25, height: 0.1 } },
     ],
     '🚪 Двері та вікна': [
         { type: 'door', label: 'Двері', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
@@ -308,6 +330,7 @@ const FURNITURE_CATEGORIES = {
     ],
     '🧑‍🍳 Кухня': [
         { type: 'kitchenTable', label: 'Кухонний стіл', dimensions: { width: 1.2, depth: 0.7, height: 0.8 } },
+        { type: 'barTable', label: 'Барний стіл', dimensions: { width: 0.6, depth: 1.2, height: 1.0 } },
         { type: 'kitchenCabinet', label: 'Кухонна шафа', dimensions: { width: 1.0, depth: 0.5, height: 1.0 } },
     ],
     '🌳 Вулиця': [
@@ -318,25 +341,26 @@ const FURNITURE_CATEGORIES = {
     ],
     '🛏️ Спальня': [
         { type: 'bed', label: 'Ліжко', dimensions: { width: 1.9, depth: 1.3, height: 0.5 } },
-        { type: 'lamp', label: 'Торшер', dimensions: { width: 0.3, depth: 0.3, height: 1.1 } },
-        { type: 'cabinet', label: 'Шафа', dimensions: { width: 1.0, depth: 0.5, height: 2.0 } },
-        { type: 'dresser', label: 'Комод', dimensions: { width: 1.2, depth: 0.5, height: 0.9 } },
-        { type: 'nightstand', label: 'Тумбочка', dimensions: { width: 0.5, depth: 0.4, height: 0.6 } },
-        { type: 'wardrobe', label: 'Шафа для одягу', dimensions: { width: 1.5, depth: 0.6, height: 2.2 } },
     ],
-    '💻 Техніка': [
-        { type: 'tv', label: 'Телевізор', dimensions: { width: 1.6, depth: 0.6, height: 1.0 } },
+    '💻 Техніка та розваги': [
+        { type: 'tv', label: 'Телевізор', dimensions: { width: 1.2, depth: 0.3, height: 1.0 } },
+        { type: 'wallMountedTV', label: 'Підвісний телевізор', dimensions: { width: 1.2, depth: 0.06, height: 0.7 } },
         { type: 'console', label: 'Консоль', dimensions: { width: 0.4, depth: 0.1, height: 0.6 } },
         { type: 'computerSetup', label: 'Комп’ютер', dimensions: { width: 1.6, depth: 0.7, height: 1.0 } },
+        { type: 'piano', label: 'Рояль', dimensions: { width: 1.5, depth: 1.5, height: 1.0 } },
+        { type: 'projectorScreen', label: 'Экран проектора', dimensions: { width: 2.0, depth: 0.1, height: 1.2 } },
     ],
     '💡 Освітлення': [
+        { type: 'lamp', label: 'Торшер', dimensions: { width: 0.3, depth: 0.3, height: 1.1 } },
         { type: 'ceilingLamp', label: 'Стельова лампа', dimensions: { width: 0.6, depth: 0.6, height: 0.6 } },
         { type: 'rgbStrip', label: 'RGB-підсвітка', dimensions: { width: 1.0, depth: 0.05, height: 0.02 } },
-        { type: 'spotlight', label: 'Прожектор', dimensions: { width: 0.3, depth: 0.3, height: 0.3 } },
     ],
-    '🌱 Рослини': [
+    '🌿 Декор та рослини': [
         { type: 'pottedPlant', label: 'Кімнатна рослина', dimensions: { width: 0.4, depth: 0.4, height: 0.8 } },
         { type: 'tallPlant', label: 'Висока рослина', dimensions: { width: 0.5, depth: 0.5, height: 1.5 } },
+        { type: 'rug', label: 'Ковер', dimensions: { width: 2.0, depth: 3.0, height: 0.02 } },
+        { type: 'mirror', label: 'Зеркало', dimensions: { width: 0.6, depth: 0.05, height: 1.2 } },
+        { type: 'aquarium', label: 'Аквариум', dimensions: { width: 1.0, depth: 0.4, height: 0.6 } },
     ],
     '🚿 Ванна кімната': [
         { type: 'toilet', label: 'Унітаз', dimensions: { width: 0.4, depth: 0.7, height: 0.7 } },
@@ -395,10 +419,41 @@ const Modal = ({ show, title, message, onClose, onConfirm, isConfirm = false }) 
 
 const ContextMenu = ({ menuState, onAction, onColorSelect, baseColors, userColors, customColor, setCustomColor, addUserColor }) => {
     const menuRef = useRef(null);
+
+    useEffect(() => {
+        if (!menuState.visible || !menuRef.current) return;
+
+        const handleMouseMove = (e) => {
+            if (!menuRef.current) return;
+            const menuRect = menuRef.current.getBoundingClientRect();
+            const threshold = 60;
+            if (
+                e.clientX < menuRect.left - threshold ||
+                e.clientX > menuRect.right + threshold ||
+                e.clientY < menuRect.top - threshold ||
+                e.clientY > menuRect.bottom + threshold
+            ) {
+                onAction('close');
+            }
+        };
+
+        const timer = setTimeout(() => {
+            window.addEventListener('mousemove', handleMouseMove);
+        }, 300);
+
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('mousemove', handleMouseMove);
+        };
+    }, [menuState.visible, onAction]);
+
+
     if (!menuState.visible) return null;
 
     const { x, y, target } = menuState;
     const isActionable = target.type === 'furniture' && target.item.type !== 'door' && target.item.type !== 'window';
+    const isToggleable = target.item && ['lamp', 'ceilingLamp', 'tv', 'aquarium', 'rgbStrip', 'wallMountedTV'].includes(target.item.type);
+    const toggleText = target?.item?.isOn ? 'Выключить' : 'Включить';
 
     const handleAction = (action) => {
         onAction(action, target.key);
@@ -415,10 +470,17 @@ const ContextMenu = ({ menuState, onAction, onColorSelect, baseColors, userColor
     };
 
     return (
-        <div ref={menuRef} style={{ ...styles.contextMenu, top: `${y}px`, left: `${x}px` }}>
+        <div id="context-menu-div" ref={menuRef} style={{ ...styles.contextMenu, top: `${y}px`, left: `${x}px` }}>
             <div style={styles.contextMenuTitle}>{target.name}</div>
+            {isToggleable && (
+                <HoverButton onClick={() => handleAction('toggle')} style={styles.contextMenuButton} hoverStyle={styles.contextMenuButtonHover}>
+                    💡 {toggleText}
+                </HoverButton>
+            )}
             <HoverButton onClick={() => handleAction('move')} style={styles.contextMenuButton} hoverStyle={styles.contextMenuButtonHover} disabled={!isActionable}>🚚 Перемістити</HoverButton>
             <HoverButton onClick={() => handleAction('rotate')} style={styles.contextMenuButton} hoverStyle={styles.contextMenuButtonHover}>🔄 Повернути</HoverButton>
+            <HoverButton onClick={() => handleAction('raise')} style={styles.contextMenuButton} hoverStyle={styles.contextMenuButtonHover} disabled={!isActionable}>🔼 Підняти</HoverButton>
+            <HoverButton onClick={() => handleAction('lower')} style={styles.contextMenuButton} hoverStyle={styles.contextMenuButtonHover} disabled={!isActionable}>🔽 Опустити</HoverButton>
             <HoverButton onClick={() => handleAction('snap')} style={styles.contextMenuButton} hoverStyle={styles.contextMenuButtonHover} disabled={!isActionable}>📌 Притулити до стіни</HoverButton>
             <HoverButton onClick={() => handleAction('delete')} style={{ ...styles.contextMenuButton, color: '#EF4444' }} hoverStyle={{ ...styles.contextMenuButtonHover, backgroundColor: '#DC2626' }}>❌ Видалити</HoverButton>
             <div style={styles.contextMenuColorSection}>
@@ -454,8 +516,6 @@ const ContextMenu = ({ menuState, onAction, onColorSelect, baseColors, userColor
         </div>
     );
 };
-
-// --- Refactored Furniture Components ---
 
 const Material = ({ isPhantom, ...props }) => {
     return isPhantom ? <primitive object={phantomMaterial} attach="material" /> : <meshStandardMaterial {...props} />;
@@ -737,7 +797,7 @@ const Bed = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
     </group>
 ));
 
-const Lamp = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+const Lamp = React.memo(({ color, rotation, isHighlighted, isPhantom, isOn = true }) => (
     <group rotation={[0, rotation, 0]}>
         <mesh position={[0, 0.05, 0]}>
             <cylinderGeometry args={[0.15, 0.15, 0.05, 32]} />
@@ -751,7 +811,7 @@ const Lamp = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
             <coneGeometry args={[0.25, 0.3, 32]} />
             <Material isPhantom={isPhantom} color={color} side={THREE.DoubleSide} roughness={0.8} />
         </mesh>
-        {!isPhantom && (<pointLight intensity={10} distance={10} color={color} position={[0, WALL_HEIGHT + 0.5, 0]} decay={2} />)}
+        {!isPhantom && isOn && (<pointLight intensity={10} distance={10} color={color} position={[0, 1.0, 0]} decay={2} />)}
         {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
     </group>
 ));
@@ -1126,34 +1186,29 @@ const Window = React.memo(({ color, rotation, isHighlighted, isPhantom, neighbor
     );
 });
 
-const TV = React.memo(({ color = '#8B5E3C', rotation = 0, isHighlighted, isPhantom, standColor = '#1E1E1E' }) => (
+const TV = React.memo(({ color, rotation, isHighlighted, isPhantom, isOn = true }) => (
     <group rotation={[0, rotation, 0]}>
-        <mesh position={[0, 0.25, 0]}>
-            <boxGeometry args={[1.6, 0.5, 0.6]} />
-            <Material isPhantom={isPhantom} color={color} roughness={0.6} metalness={0.1} />
+        <mesh position={[0, 0.65, 0]}>
+            <boxGeometry args={[1.2, 0.7, 0.04]} />
+            <Material isPhantom={isPhantom} color="#1a1a1a" />
         </mesh>
-        <mesh position={[0, 0.85, 0]}>
-            <boxGeometry args={[1.25, 0.75, 0.06]} />
-            <Material isPhantom={isPhantom} color="#2C3A59" roughness={0.3} metalness={0.4} />
+        <mesh position={[0, 0.65, 0.021]}>
+            <planeGeometry args={[1.18, 0.68]} />
+            <meshStandardMaterial
+                color={isOn ? "#E1E6F0" : "#050505"}
+                emissive={isOn ? "#E1E6F0" : "#000000"}
+                emissiveIntensity={isOn ? 0.7 : 0}
+            />
         </mesh>
-        <mesh position={[0, 0.85, 0.035]}>
-            <boxGeometry args={[1.15, 0.65, 0.015]} />
-            <Material isPhantom={isPhantom} color="#000000" roughness={0.1} metalness={0.9} envMapIntensity={0.7} />
+        <mesh position={[0, 0.3, 0]}>
+            <boxGeometry args={[0.5, 0.04, 0.25]} />
+            <Material isPhantom={isPhantom} color={color} metalness={0.3} roughness={0.5} />
         </mesh>
-        <mesh position={[0, 0.55, 0]}>
-            <boxGeometry args={[0.12, 0.25, 0.12]} />
-            <Material isPhantom={isPhantom} color={standColor} roughness={0.5} metalness={0.6} />
+        <mesh position={[0, 0.15, 0]}>
+            <cylinderGeometry args={[0.02, 0.03, 0.3, 16]} />
+            <Material isPhantom={isPhantom} color={color} metalness={0.3} roughness={0.5} />
         </mesh>
-        <mesh position={[0, 0.43, 0]}>
-            <boxGeometry args={[0.5, 0.025, 0.3]} />
-            <Material isPhantom={isPhantom} color={standColor} roughness={0.5} metalness={0.6} />
-        </mesh>
-        {[-0.18, 0.18].map((x) => (
-            <mesh key={x} position={[x, 0.35, 0.1]}>
-                <boxGeometry args={[0.1, 0.15, 0.05]} />
-                <Material isPhantom={isPhantom} color={standColor} roughness={0.5} metalness={0.6} />
-            </mesh>
-        ))}
+        {!isPhantom && isOn && <pointLight intensity={2} distance={4} color={"#E1E6F0"} position={[0, 0.65, 0.5]} />}
         {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
     </group>
 ));
@@ -1208,54 +1263,45 @@ const ComputerSetup = React.memo(({ color, rotation, isHighlighted, isPhantom })
     </group>
 ));
 
-const CeilingLamp = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+const CeilingLamp = React.memo(({ color, rotation, isHighlighted, isPhantom, isOn = true }) => (
     <group rotation={[0, rotation, 0]}>
-        <mesh position={[0, WALL_HEIGHT + 0.9, 0]}>
+        <mesh position={[0, WALL_HEIGHT - 0.1, 0]}>
             <cylinderGeometry args={[0.1, 0.1, 0.05, 16]} />
             <Material isPhantom={isPhantom} color="#4B5563" />
         </mesh>
-        <mesh position={[0, WALL_HEIGHT + 0.7, 0]}>
-            <cylinderGeometry args={[0.02, 0.02, 0.4, 8]} />
+        <mesh position={[0, WALL_HEIGHT - 0.2, 0]}>
+            <cylinderGeometry args={[0.02, 0.02, 0.2, 8]} />
             <Material isPhantom={isPhantom} color="#4B5563" />
         </mesh>
-        <mesh position={[0, WALL_HEIGHT + 0.5, 0]}>
+        <mesh position={[0, WALL_HEIGHT - 0.4, 0]}>
             <sphereGeometry args={[0.3, 16, 16]} />
             <Material isPhantom={isPhantom} color={color} transparent opacity={0.7} />
         </mesh>
-        {!isPhantom && (<pointLight intensity={10} distance={10} color={color} position={[0, WALL_HEIGHT + 0.5, 0]} decay={2} />)}
+        {!isPhantom && isOn && (<pointLight intensity={10} distance={10} color={color} position={[0, WALL_HEIGHT - 0.4, 0]} decay={2} />)}
         {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
     </group>
 ));
 
-const Spotlight = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
-    <group rotation={[0, rotation, 0]}>
-        <mesh position={[0, WALL_HEIGHT - 0.2, 0]}>
-            <cylinderGeometry args={[0.1, 0.2, 0.3]} />
-            <Material isPhantom={isPhantom} color="#2C3A59" />
-        </mesh>
-        {!isPhantom && <spotLight position={[0, WALL_HEIGHT - 0.2, 0]} target-position={[0, 0, 0]} angle={Math.PI / 6} penumbra={0.5} intensity={50} distance={10} color={color} castShadow />}
-        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
-    </group>
-));
-
-const RgbStrip = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
+const RgbStrip = React.memo(({ color, rotation, isHighlighted, isPhantom, isOn = true }) => {
     const [rgbColor, setRgbColor] = useState(new THREE.Color(color));
     useEffect(() => {
-        if (!isPhantom) {
+        if (!isPhantom && isOn) {
             const interval = setInterval(() => {
                 setRgbColor(new THREE.Color(Math.random() * 0xffffff));
             }, 1000);
             return () => clearInterval(interval);
         }
-    }, [isPhantom]);
+    }, [isPhantom, isOn]);
+
+    const finalColor = isOn ? rgbColor : new THREE.Color("#333333");
 
     return (
         <group rotation={[0, rotation, 0]}>
             <mesh position={[0, 0.05, 0]}>
                 <boxGeometry args={[1, 0.02, 0.05]} />
-                <Material isPhantom={isPhantom} color={rgbColor} emissive={rgbColor} emissiveIntensity={0.5} />
+                <Material isPhantom={isPhantom} color={finalColor} emissive={finalColor} emissiveIntensity={isOn ? 0.5 : 0} />
             </mesh>
-            {!isPhantom && <pointLight intensity={5} distance={2} color={rgbColor} />}
+            {!isPhantom && isOn && <pointLight intensity={5} distance={2} color={rgbColor} />}
             {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
         </group>
     );
@@ -1327,6 +1373,176 @@ const TallPlant = React.memo(({ color = "#3CB371", rotation = 0, isHighlighted, 
     );
 });
 
+const Rug = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.011, 0]}>
+            <boxGeometry args={[2.0, 0.02, 3.0]} />
+            <Material isPhantom={isPhantom} color={color} roughness={0.9} />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const Mirror = React.memo(({ color, rotation, isHighlighted, isPhantom, graphicsSettings }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh>
+            <boxGeometry args={[0.6, 1.2, 0.05]} />
+            <Material isPhantom={isPhantom} color={color} />
+        </mesh>
+        {!isPhantom && graphicsSettings.reflections && (
+            <mesh position={[0, 0, 0.026]}>
+                <planeGeometry args={[0.55, 1.15]} />
+                <MeshReflectorMaterial
+                    resolution={512}
+                    mirror={0.9}
+                    color="#a0a0a0"
+                />
+            </mesh>
+        )}
+        {!isPhantom && !graphicsSettings.reflections && (
+            <mesh position={[0, 0, 0.026]}>
+                <planeGeometry args={[0.55, 1.15]} />
+                <meshStandardMaterial color="#a0a0a0" metalness={0.5} roughness={0.5} />
+            </mesh>
+        )}
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const BarStool = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.75, 0]}>
+            <cylinderGeometry args={[0.2, 0.2, 0.08, 32]} />
+            <Material isPhantom={isPhantom} color={color} />
+        </mesh>
+        <mesh position={[0, 0.37, 0]}>
+            <cylinderGeometry args={[0.03, 0.03, 0.7, 16]} />
+            <Material isPhantom={isPhantom} color="#4B5563" />
+        </mesh>
+        <mesh position={[0, 0.05, 0]}>
+            <cylinderGeometry args={[0.25, 0.25, 0.1, 32]} />
+            <Material isPhantom={isPhantom} color="#4B5563" />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const Aquarium = React.memo(({ color, rotation, isHighlighted, isPhantom, isOn = true }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.3, 0]}>
+            <boxGeometry args={[1.0, 0.6, 0.4]} />
+            <Material isPhantom={isPhantom} color="#ADD8E6" transparent opacity={0.4} />
+        </mesh>
+        <mesh position={[0, 0.05, 0]}>
+            <boxGeometry args={[1.05, 0.1, 0.45]} />
+            <Material isPhantom={isPhantom} color={color} />
+        </mesh>
+        <mesh position={[0, 0.6, 0]}>
+            <boxGeometry args={[1.05, 0.05, 0.45]} />
+            <Material isPhantom={isPhantom} color={color} />
+        </mesh>
+        {!isPhantom && isOn && <pointLight intensity={2} distance={3} color="#5F9EA0" position={[0, 0.3, 0]} />}
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const Piano = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.4, -0.2]}>
+            <boxGeometry args={[1.4, 0.8, 1.0]} />
+            <Material isPhantom={isPhantom} color={color} metalness={0.2} roughness={0.3} />
+        </mesh>
+        <mesh position={[0, 0.4, 0.4]}>
+            <boxGeometry args={[1.2, 0.1, 0.4]} />
+            <Material isPhantom={isPhantom} color="#f0f0f0" />
+        </mesh>
+        <mesh position={[0, 0.42, 0.45]}>
+            <boxGeometry args={[1.1, 0.05, 0.3]} />
+            <Material isPhantom={isPhantom} color="#1a1a1a" />
+        </mesh>
+        {[[-0.6, -0.6], [0.6, -0.6], [0, 0.7]].map(([x, z], i) => (
+            <mesh key={i} position={[x, 0.15, z]}>
+                <cylinderGeometry args={[0.05, 0.05, 0.3, 16]} />
+                <Material isPhantom={isPhantom} color={color} />
+            </mesh>
+        ))}
+        <mesh position={[0, 0.82, -0.2]} rotation={[0.5, 0, 0]}>
+            <boxGeometry args={[1.4, 0.04, 1.0]} />
+            <Material isPhantom={isPhantom} color={color} metalness={0.2} roughness={0.3} />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const BeanBag = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.3, 0]}>
+            <sphereGeometry args={[0.4, 32, 16]} />
+            <meshStandardMaterial color={color} roughness={0.8} metalness={0.1} />
+        </mesh>
+        <mesh position={[0, 0.2, 0.1]} scale={[1.1, 0.8, 1.1]}>
+            <sphereGeometry args={[0.35, 32, 16]} />
+            <meshStandardMaterial color={color} roughness={0.8} metalness={0.1} />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const WallShelf = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0, 0]}>
+            <boxGeometry args={[1.2, 0.05, 0.25]} />
+            <Material isPhantom={isPhantom} color={color} />
+        </mesh>
+        <mesh position={[0, -0.025, -0.1]}>
+            <boxGeometry args={[1.2, 0.1, 0.05]} />
+            <Material isPhantom={isPhantom} color={color} />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const ProjectorScreen = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 1.8, 0]}>
+            <boxGeometry args={[2.0, 1.2, 0.05]} />
+            <Material isPhantom={isPhantom} color="#111111" />
+        </mesh>
+        <mesh position={[0, 1.8, 0.03]}>
+            <planeGeometry args={[1.95, 1.15]} />
+            <Material isPhantom={isPhantom} color="#FFFFFF" />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const BarTable = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
+    <group rotation={[0, rotation, 0]}>
+        <mesh position={[0, 0.5, 0]}>
+            <boxGeometry args={[0.6, 1.0, 1.2]} />
+            <Material isPhantom={isPhantom} color={color} />
+        </mesh>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
+const WallMountedTV = React.memo(({ color, rotation, isHighlighted, isPhantom, isOn = true }) => (
+    <group rotation={[0, rotation, 0]}>
+        <group position={[0, 0, -0.47]}>
+            <mesh>
+                <boxGeometry args={[1.2, 0.7, 0.06]} />
+                <Material isPhantom={isPhantom} color="#111111" />
+            </mesh>
+            <mesh position={[0, 0, 0.035]}>
+                <planeGeometry args={[1.15, 0.65]} />
+                <meshStandardMaterial color={isOn ? "#E1E6F0" : "#050505"} emissive={isOn ? "#E1E6F0" : "#000000"} emissiveIntensity={isOn ? 0.7 : 0} />
+            </mesh>
+            {!isPhantom && isOn && <pointLight intensity={2} distance={4} color={"#E1E6F0"} position={[0, 0, 0.5]} />}
+        </group>
+        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+));
+
 const WallPhantom = React.memo(({ hasOpening }) => {
     if (hasOpening) {
         return (
@@ -1386,7 +1602,8 @@ const FloorPhantom = React.memo(() => (
 ));
 
 const FURNITURE_COMPONENTS = {
-    sofa: Sofa, chair: Chair, table: Table, coffeeTable: CoffeeTable, bookshelf: Bookshelf, armchair: Armchair, fireplace: Fireplace, door: Door, window: Window, kitchenTable: KitchenTable, kitchenCabinet: KitchenCabinet, outdoorChair: OutdoorChair, outdoorTable: OutdoorTable, grill: Grill, gardenBench: GardenBench, bed: Bed, lamp: Lamp, cabinet: Cabinet, dresser: Dresser, nightstand: Nightstand, wardrobe: Wardrobe, tv: TV, console: Console, computerSetup: ComputerSetup, ceilingLamp: CeilingLamp, spotlight: Spotlight, rgbStrip: RgbStrip, pottedPlant: PottedPlant, tallPlant: TallPlant, toilet: Toilet, sink: Sink, bathtub: Bathtub, shower: Shower, desk: Desk, officeChair: OfficeChair, filingCabinet: FilingCabinet, diningTable: DiningTable, diningChair: DiningChair
+    sofa: Sofa, chair: Chair, table: Table, coffeeTable: CoffeeTable, bookshelf: Bookshelf, armchair: Armchair, fireplace: Fireplace, door: Door, window: Window, kitchenTable: KitchenTable, kitchenCabinet: KitchenCabinet, outdoorChair: OutdoorChair, outdoorTable: OutdoorTable, grill: Grill, gardenBench: GardenBench, bed: Bed, lamp: Lamp, cabinet: Cabinet, dresser: Dresser, nightstand: Nightstand, wardrobe: Wardrobe, tv: TV, console: Console, computerSetup: ComputerSetup, ceilingLamp: CeilingLamp, rgbStrip: RgbStrip, pottedPlant: PottedPlant, tallPlant: TallPlant, toilet: Toilet, sink: Sink, bathtub: Bathtub, shower: Shower, desk: Desk, officeChair: OfficeChair, filingCabinet: FilingCabinet, diningTable: DiningTable, diningChair: DiningChair,
+    rug: Rug, mirror: Mirror, barStool: BarStool, aquarium: Aquarium, piano: Piano, beanBag: BeanBag, wallShelf: WallShelf, projectorScreen: ProjectorScreen, barTable: BarTable, wallMountedTV: WallMountedTV,
 };
 
 const Tutorial = ({ show, onClose }) => {
@@ -1396,7 +1613,7 @@ const Tutorial = ({ show, onClose }) => {
         { title: 'Інструменти та Кольори', text: `У лівій панелі ви знайдете інструменти (🧱, ⬜) та палітру кольорів. Виберіть потрібний інструмент і колір, щоб почати.` },
         { title: 'Створення Підлоги та Стін', text: `Виберіть інструмент "⬜ Підлога" або "🧱 Стіна". Клацніть **ЛІВОЮ** кнопкою миші на сітці та, не відпускаючи, ведіть курсор, щоб розмістити об'єкти.` },
         { title: 'Розміщення Меблів (Перетягування)', text: 'Клацніть **ЛІВОЮ** кнопкою миші на предметі в інвентарі та, не відпускаючи, перетягніть його на потрібну плитку підлоги. Відпустіть кнопку, щоб розмістити.' },
-        { title: 'Дії з об\'єктами (Правий Клік)', text: 'Ви можете **пофарбувати**, видалити, повернути або притулити до стіни будь-який об\'єкт, клацнувши по ньому **ПРАВОЮ** кнопкою миші та обравши дію в меню.' },
+        { title: 'Дії з об\'єктами (Правий Клік)', text: 'Ви можете **пофарбувати**, **підняти/опустити**, видалити, повернути або притулити до стіни будь-який об\'єкт, клацнувши по ньому **ПРАВОЮ** кнопкою миші та обравши дію в меню.' },
         { title: 'Обертання Об\'єктів (Клавіша)', text: 'Щоб **обернути** об\'єкт (фантомний під час перетягування або вже розміщений), наведіть на нього курсор і натисніть **"R"** на клавіатурі.' },
         { title: 'Прив\'язка до Стіни (Клавіша)', text: 'Щоб **прив\'язати** меблі до краю блоку (до стіни), наведіть на об\'єкт і натисніть **"T"**. Об\'єкт переміститься до найближчої стіни замість центру блоку.' },
         { title: 'Зберегти Проект', text: 'Використовуйте кнопку "Зберегти" у лівій панелі, щоб зберегти поточний стан вашої кімнати.' },
@@ -1407,6 +1624,200 @@ const Tutorial = ({ show, onClose }) => {
     const handleNext = () => { if (step < steps.length - 1) { setStep(step + 1); } else { onClose(); setStep(0); localStorage.setItem('hasSeenTutorial', 'true'); } };
     const handleSkip = () => { onClose(); setStep(0); localStorage.setItem('hasSeenTutorial', 'true'); };
     return (<div style={styles.tutorialModal}><div style={styles.tutorialContent}><h2 style={styles.tutorialTitle}>{steps[step].title}</h2><p style={styles.tutorialText}>{steps[step].text}</p><div style={styles.tutorialButtonContainer}>{step < steps.length - 1 ? (<HoverButton onClick={handleSkip} style={{ ...styles.buttonBase, ...styles.tutorialSkipButton }} hoverStyle={styles.tutorialSkipButtonHover}>Пропустити</HoverButton>) : (<div />)}<HoverButton onClick={handleNext} style={{ ...styles.buttonBase, ...styles.tutorialNextButton, marginLeft: step < steps.length - 1 ? 'auto' : '0' }} hoverStyle={styles.tutorialNextButtonHover}>{step < steps.length - 1 ? 'Далі' : 'Почати'}</HoverButton></div></div></div>);
+};
+
+const GraphicsSettingsModal = ({ show, onClose, settings, onSettingsChange, onPresetChange }) => {
+    if (!show) return null;
+
+    const handleToggle = (key) => {
+        onSettingsChange(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const handleSelectChange = (e, key) => {
+        onSettingsChange(prev => ({ ...prev, [key]: parseFloat(e.target.value) }));
+    }
+
+    const getActivePreset = (s) => {
+        if (s.dpr === 0.5 && s.msaaSamples === 0 && !s.reflections && !s.shadows) return 'Низькі';
+        if (s.dpr === 0.75 && s.msaaSamples === 2 && !s.reflections && s.shadows) return 'Середні';
+        if (s.dpr === 1 && s.msaaSamples === 4 && s.reflections && s.shadows) return 'Високі';
+        if (s.dpr === 1.5 && s.msaaSamples === 8 && s.reflections && s.shadows) return 'Ультра';
+        return 'Користувацькі';
+    };
+
+    const activePreset = getActivePreset(settings);
+
+    const presetButtonStyle = {
+        padding: '8px 12px',
+        border: '1px solid var(--accent)',
+        background: 'transparent',
+        color: 'var(--text-color-light)',
+        borderRadius: '5px',
+        cursor: 'pointer',
+        textAlign: 'center',
+        flexGrow: 1,
+    };
+
+    const presetButtonActiveStyle = {
+        ...presetButtonStyle,
+        background: 'var(--accent)',
+        color: 'white',
+    };
+
+    const controlBaseStyle = {
+        padding: '8px 12px',
+        border: '1px solid var(--accent)',
+        borderRadius: '5px',
+        cursor: 'pointer',
+        textAlign: 'center',
+        minWidth: '120px',
+        fontSize: '1em',
+    };
+
+    const settingToggleStyle = {
+        ...controlBaseStyle,
+        background: 'transparent',
+        color: 'var(--text-color-light)',
+    };
+
+    const settingToggleActiveStyle = {
+        ...settingToggleStyle,
+        background: 'var(--accent)',
+        color: 'white',
+    };
+
+    const selectControlStyle = {
+        ...controlBaseStyle,
+        background: 'var(--text-color-light)',
+        color: 'var(--primary-darker)',
+        appearance: 'none',
+        fontWeight: '600',
+    };
+
+    const presets = ['Низькі', 'Середні', 'Високі', 'Ультра', 'Користувацькі'];
+
+    return (
+        <div style={styles.tutorialModal}>
+            <div style={{ ...styles.tutorialContent, maxWidth: '500px', gap: '15px' }}>
+                <h2 style={styles.tutorialTitle}>Налаштування графіки</h2>
+
+                <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '10px', width: '100%' }}>
+                    {presets.map(preset => (
+                        <button
+                            key={preset}
+                            onClick={() => preset !== 'Користувацькі' && onPresetChange(preset)}
+                            style={preset === activePreset ? presetButtonActiveStyle : presetButtonStyle}
+                            disabled={preset === 'Користувацькі'}
+                        >
+                            {preset}
+                        </button>
+                    ))}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left', padding: '10px', width: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '1.1em' }}>Масштаб рендера</span>
+                        <select value={settings.dpr} onChange={(e) => handleSelectChange(e, 'dpr')} style={selectControlStyle}>
+                            <option value={0.5}>50%</option>
+                            <option value={0.75}>75%</option>
+                            <option value={1}>100%</option>
+                            <option value={1.5}>150%</option>
+                            <option value={2}>200%</option>
+                        </select>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '1.1em' }}>Згладжування (MSAA)</span>
+                        <select value={settings.msaaSamples} onChange={(e) => handleSelectChange(e, 'msaaSamples')} style={selectControlStyle}>
+                            <option value={0}>Вимк.</option>
+                            <option value={2}>2x</option>
+                            <option value={4}>4x</option>
+                            <option value={8}>8x</option>
+                            <option value={16}>16x</option>
+                        </select>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '1.1em' }}>Відображення в дзеркалі</span>
+                        <button
+                            onClick={() => handleToggle('reflections')}
+                            style={settings.reflections ? settingToggleActiveStyle : settingToggleStyle}
+                        >
+                            {settings.reflections ? 'Увімк.' : 'Вимк.'}
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '1.1em' }}>Динамічні тіні</span>
+                        <button
+                            onClick={() => handleToggle('shadows')}
+                            style={settings.shadows ? settingToggleActiveStyle : settingToggleStyle}
+                        >
+                            {settings.shadows ? 'Увімк.' : 'Вимк.'}
+                        </button>
+                    </div>
+                </div>
+                <HoverButton onClick={onClose} style={{ ...styles.buttonBase, ...styles.tutorialNextButton, padding: '10px 20px', fontSize: '16px', marginTop: '10px', alignSelf: 'center' }} hoverStyle={styles.tutorialNextButtonHover}>Закрити</HoverButton>
+            </div>
+        </div>
+    );
+};
+
+const GpuDetector = ({ onDetect }) => {
+    const gpu = useDetectGPU();
+    useEffect(() => {
+        if (gpu) {
+            onDetect(gpu);
+        }
+    }, [gpu, onDetect]);
+    return null;
+};
+
+const Preloader = () => (
+    <div style={styles.preloader}>
+        <p>Завантаження сцени...</p>
+        <div className="spinner" />
+        <style>{`
+            .spinner {
+                border: 4px solid rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                border-top: 4px solid var(--accent);
+                width: 40px;
+                height: 40px;
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `}</style>
+    </div>
+);
+
+const FpsStabilizer = ({ onStable, stableFramesRequired = 30, fpsThreshold = 45 }) => {
+    const frameCount = useRef(0);
+    const fpsHistory = useRef([]);
+    const isStable = useRef(false);
+
+    useFrame((_, delta) => {
+        if (isStable.current) return;
+
+        frameCount.current++;
+        if (frameCount.current < 60) return;
+
+        const currentFps = 1 / delta;
+        fpsHistory.current.push(currentFps);
+        if (fpsHistory.current.length > stableFramesRequired) {
+            fpsHistory.current.shift();
+        }
+
+        if (fpsHistory.current.length === stableFramesRequired) {
+            const allStable = fpsHistory.current.every(fps => fps >= fpsThreshold);
+            if (allStable) {
+                isStable.current = true;
+                onStable();
+            }
+        }
+    });
+
+    return null;
 };
 
 export default function Edit() {
@@ -1438,6 +1849,7 @@ export default function Edit() {
     const [showModal, setShowModal] = useState(false);
     const [modalContent, setModalContent] = useState({ title: '', message: '', onConfirm: null, isConfirm: false });
     const [isMobile, setIsMobile] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
     const mobileMovementInput = useRef({ forward: 0, backward: 0, left: 0, right: 0 });
     const cameraRotationInput = useRef({ yaw: 0, pitch: 0 });
     const cameraVerticalInput = useRef(0);
@@ -1447,16 +1859,140 @@ export default function Edit() {
     const targetCameraQuaternion = useRef(initialCameraQuaternion);
     const allFurnitureItems = useMemo(() => Object.values(FURNITURE_CATEGORIES).flat(), []);
 
+    const [graphicsSettings, setGraphicsSettings] = useState({ reflections: true, shadows: true, dpr: 1, msaaSamples: 4 });
+    const [showGraphicsSettings, setShowGraphicsSettings] = useState(false);
+    const [isGpuReady, setIsGpuReady] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const handleGpuDetect = useCallback((gpu) => {
+        if (isGpuReady) return;
+
+        const savedSettings = localStorage.getItem('graphicsSettings');
+        if (savedSettings) {
+            try {
+                const parsedSettings = JSON.parse(savedSettings);
+                setGraphicsSettings(parsedSettings);
+            } catch (e) {
+                console.error("Failed to parse graphics settings from localStorage", e);
+            }
+        }
+        setIsGpuReady(true);
+    }, [isGpuReady]);
+
+    useEffect(() => {
+        if (!isGpuReady) return;
+
+        const timer = setTimeout(() => {
+            if (isLoading) {
+                setModalContent({
+                    title: 'Низька продуктивність',
+                    message: 'Не вдалося стабілізувати FPS. Ваше обладнання може бути недостатньо потужним для комфортної роботи. Рекомендуємо знизити налаштування графіки.',
+                    onConfirm: () => {
+                        setShowModal(false);
+                        setShowGraphicsSettings(true);
+                    },
+                    isConfirm: false
+                });
+                setShowModal(true);
+                setIsLoading(false);
+            }
+        }, 15000);
+
+        return () => clearTimeout(timer);
+    }, [isGpuReady, isLoading]);
+
+    const handleGraphicsSettingsChange = (updater) => {
+        const newSettings = typeof updater === 'function' ? updater(graphicsSettings) : updater;
+        setGraphicsSettings(newSettings);
+        localStorage.setItem('graphicsSettings', JSON.stringify(newSettings));
+    };
+
+    const handlePresetChange = (preset) => {
+        let newSettings;
+        switch (preset) {
+            case 'Низькі':
+                newSettings = { dpr: 0.5, msaaSamples: 0, reflections: false, shadows: false };
+                break;
+            case 'Середні':
+                newSettings = { dpr: 0.75, msaaSamples: 2, reflections: false, shadows: true };
+                break;
+            case 'Високі':
+                newSettings = { dpr: 1, msaaSamples: 4, reflections: true, shadows: true };
+                break;
+            case 'Ультра':
+                newSettings = { dpr: 1.5, msaaSamples: 8, reflections: true, shadows: true };
+                break;
+            default:
+                newSettings = { dpr: 1, msaaSamples: 4, reflections: true, shadows: true };
+        }
+        handleGraphicsSettingsChange(newSettings);
+    };
+
+    const updateWalls = useCallback((updater) => {
+        setWalls(updater);
+        setIsDirty(true);
+    }, []);
+    const updateFurniture = useCallback((updater) => {
+        setFurniture(updater);
+        setIsDirty(true);
+    }, []);
+    const updateFloorTiles = useCallback((updater) => {
+        setFloorTiles(updater);
+        setIsDirty(true);
+    }, []);
+    const updateUserColors = useCallback((updater) => {
+        setUserColors(updater);
+        setIsDirty(true);
+    }, []);
+
     useEffect(() => {
         if (!isWebGLSupported()) { setModalContent({ title: 'Браузер/пристрій не підтримується', message: 'Ваш браузер або пристрій не підтримує WebGL, необхідний для роботи цього додатка. Будь ласка, спробуйте інший браузер або пристрій.', onConfirm: () => navigate('/'), isConfirm: false }); setShowModal(true); }
         setIsMobile(isMobileDevice());
     }, [navigate]);
 
+    useEffect(() => {
+        const handleBeforeUnload = (e) => {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [isDirty]);
+
+    useEffect(() => {
+        if (contextMenu.visible && contextMenu.target) {
+            const menuElement = document.getElementById('context-menu-div');
+            if (menuElement) {
+                const { offsetWidth, offsetHeight } = menuElement;
+                const { innerWidth, innerHeight } = window;
+                let newX = contextMenu.x;
+                let newY = contextMenu.y;
+
+                if (newX + offsetWidth > innerWidth) {
+                    newX = innerWidth - offsetWidth - 10;
+                }
+                if (newY + offsetHeight > innerHeight) {
+                    newY = innerHeight - offsetHeight - 10;
+                }
+
+                if (newX !== contextMenu.x || newY !== contextMenu.y) {
+                    setContextMenu(prev => ({ ...prev, x: newX, y: newY }));
+                }
+            }
+        }
+    }, [contextMenu]);
+
+
     const resetAllState = useCallback(() => {
-        setWalls({}); setFurniture({}); setFloorTiles({}); setGridSize(INITIAL_GRID_SIZE); setHoveredCell(null); setIsDragging(false); setDraggedType(null); setDraggedSubType(null); setPhantomObjectPosition(null); setPhantomObjectRotation(0); setUserColors([]); setSelectedColor(BASE_COLORS[0]); setDraggedItemData(null);
+        updateWalls({}); updateFurniture({}); updateFloorTiles({}); setGridSize(INITIAL_GRID_SIZE); setHoveredCell(null); setIsDragging(false); setDraggedType(null); setDraggedSubType(null); setPhantomObjectPosition(null); setPhantomObjectRotation(0); updateUserColors([]); setSelectedColor(BASE_COLORS[0]); setDraggedItemData(null);
         targetCameraPosition.current.set(...INITIAL_CAMERA_POSITION);
         const tempCamera = new THREE.Camera(); tempCamera.position.set(...INITIAL_CAMERA_POSITION); tempCamera.lookAt(INITIAL_LOOK_AT_TARGET); targetCameraQuaternion.current.copy(tempCamera.quaternion);
-    }, []);
+        setIsDirty(false);
+    }, [updateWalls, updateFurniture, updateFloorTiles, updateUserColors]);
 
     const getKey = useCallback((x, z) => `${x},${z}`, []);
     const checkGridExpansion = useCallback((x, z) => { const threshold = gridSize * 0.8; if (Math.abs(x) > threshold || Math.abs(z) > threshold) { setGridSize((prev) => prev * 2); } }, [gridSize]);
@@ -1489,13 +2025,13 @@ export default function Edit() {
     const paintObject = useCallback((targetKey, color) => {
         if (!targetKey) return;
         if (furniture[targetKey]) {
-            setFurniture(prev => ({ ...prev, [targetKey]: { ...prev[targetKey], color: color } }));
+            updateFurniture(prev => ({ ...prev, [targetKey]: { ...prev[targetKey], color: color } }));
         } else if (walls[targetKey]) {
-            setWalls(prev => ({ ...prev, [targetKey]: { ...prev[targetKey], color: color } }));
+            updateWalls(prev => ({ ...prev, [targetKey]: { ...prev[targetKey], color: color } }));
         } else if (floorTiles[targetKey]) {
-            setFloorTiles(prev => ({ ...prev, [targetKey]: color }));
+            updateFloorTiles(prev => ({ ...prev, [targetKey]: color }));
         }
-    }, [furniture, walls, floorTiles]);
+    }, [furniture, walls, floorTiles, updateFurniture, updateWalls, updateFloorTiles]);
 
     const rotateObject = useCallback((targetKey = null) => {
         const key = targetKey || (hoveredCell ? getKey(hoveredCell.x, hoveredCell.z) : null);
@@ -1514,7 +2050,7 @@ export default function Edit() {
                 const snapResult = calculateWallSnapPosition(x, z, walls, floorTiles, getKey, { ...currentFurniture, rotation: newRotation, dimensions: furnitureDimensions });
                 if (snapResult.snapped) { newOffsetX = snapResult.offsetX; newOffsetZ = snapResult.offsetZ; isSnapped = true; }
             }
-            setFurniture((prev) => {
+            updateFurniture((prev) => {
                 let updated = { ...prev, [key]: { ...prev[key], rotation: newRotation, offsetX: newOffsetX, offsetZ: newOffsetZ, isSnapped: isSnapped } };
                 if (currentFurniture.type === 'window') {
                     updated = updateNeighboringWindows(x, z, updated);
@@ -1525,12 +2061,12 @@ export default function Edit() {
                 return updated;
             });
             if (['door', 'window'].includes(currentFurniture.type)) {
-                setWalls((prev) => prev[key]?.hasOpening ? { ...prev, [key]: { ...prev[key], rotation: newRotation } } : prev);
+                updateWalls((prev) => prev[key]?.hasOpening ? { ...prev, [key]: { ...prev[key], rotation: newRotation } } : prev);
             }
         } else if (walls[key] && !walls[key].hasOpening) {
-            setWalls((prev) => ({ ...prev, [key]: { ...prev[key], rotation: ((prev[key].rotation || 0) + Math.PI / 2) % (Math.PI * 2) } }));
+            updateWalls((prev) => ({ ...prev, [key]: { ...prev[key], rotation: ((prev[key].rotation || 0) + Math.PI / 2) % (Math.PI * 2) } }));
         }
-    }, [furniture, walls, getKey, hoveredCell, isDragging, phantomObjectPosition, draggedType, floorTiles, updateNeighboringWindows]);
+    }, [furniture, walls, getKey, hoveredCell, isDragging, phantomObjectPosition, draggedType, floorTiles, updateNeighboringWindows, updateFurniture, updateWalls]);
 
     const snapToWall = useCallback((targetKey = null) => {
         const key = targetKey || (hoveredCell ? getKey(hoveredCell.x, hoveredCell.z) : null);
@@ -1543,19 +2079,19 @@ export default function Edit() {
             if (furnitureDimensions) {
                 const snapResult = calculateWallSnapPosition(x, z, walls, floorTiles, getKey, { ...furnitureItem, dimensions: furnitureDimensions });
                 if (snapResult.snapped && !furnitureItem.isSnapped) {
-                    setFurniture((prev) => ({ ...prev, [key]: { ...prev[key], offsetX: snapResult.offsetX, offsetZ: snapResult.offsetZ, isSnapped: true } }));
+                    updateFurniture((prev) => ({ ...prev, [key]: { ...prev[key], offsetX: snapResult.offsetX, offsetZ: snapResult.offsetZ, isSnapped: true } }));
                 } else if (furnitureItem.isSnapped) {
-                    setFurniture((prev) => ({ ...prev, [key]: { ...prev[key], offsetX: 0, offsetZ: 0, isSnapped: false } }));
+                    updateFurniture((prev) => ({ ...prev, [key]: { ...prev[key], offsetX: 0, offsetZ: 0, isSnapped: false } }));
                 }
             }
         }
-    }, [hoveredCell, furniture, walls, floorTiles, getKey]);
+    }, [hoveredCell, furniture, walls, floorTiles, getKey, updateFurniture]);
 
     const deleteObject = useCallback((targetKey) => {
         const [x, z] = targetKey.split(',').map(Number);
         if (furniture[targetKey]) {
             const removedType = furniture[targetKey].type;
-            setFurniture(prev => {
+            updateFurniture(prev => {
                 const copy = { ...prev };
                 delete copy[targetKey];
                 if (removedType === 'window') {
@@ -1566,14 +2102,14 @@ export default function Edit() {
                 return copy;
             });
             if (['door', 'window'].includes(removedType)) {
-                setWalls(prev => { const copy = { ...prev }; if (copy[targetKey]?.hasOpening) delete copy[targetKey]; return copy; });
+                updateWalls(prev => { const copy = { ...prev }; if (copy[targetKey]?.hasOpening) delete copy[targetKey]; return copy; });
             }
         } else if (walls[targetKey]) {
-            setWalls(prev => { const copy = { ...prev }; delete copy[targetKey]; return copy; });
+            updateWalls(prev => { const copy = { ...prev }; delete copy[targetKey]; return copy; });
         } else if (floorTiles[targetKey]) {
-            setFloorTiles(prev => { const copy = { ...prev }; delete copy[targetKey]; return copy; });
+            updateFloorTiles(prev => { const copy = { ...prev }; delete copy[targetKey]; return copy; });
         }
-    }, [furniture, walls, floorTiles, getKey, updateNeighboringWindows]);
+    }, [furniture, walls, floorTiles, getKey, updateNeighboringWindows, updateFurniture, updateWalls, updateFloorTiles]);
 
     const handleContextMenu = useCallback((e, x, z) => {
         e.nativeEvent.preventDefault();
@@ -1610,25 +2146,52 @@ export default function Edit() {
             setPhantomObjectPosition({ x, z });
             setDraggedItemData({ ...itemToDrag, originalKey: key });
 
-            setFurniture((prev) => {
+            updateFurniture((prev) => {
                 const newFurniture = { ...prev };
                 delete newFurniture[key];
                 return newFurniture;
             });
         }
-    }, [furniture]);
+    }, [furniture, updateFurniture]);
 
     const handleContextMenuAction = useCallback((action, key) => {
+        const HEIGHT_INCREMENT = 0.1;
         switch (action) {
             case 'delete': deleteObject(key); break;
             case 'rotate': rotateObject(key); break;
             case 'snap': snapToWall(key); break;
             case 'move': startMoveObject(key); break;
+            case 'raise':
+                updateFurniture(prev => {
+                    if (prev[key]) {
+                        const currentY = prev[key].y || 0;
+                        return { ...prev, [key]: { ...prev[key], y: currentY + HEIGHT_INCREMENT } };
+                    }
+                    return prev;
+                });
+                break;
+            case 'lower':
+                updateFurniture(prev => {
+                    if (prev[key]) {
+                        const currentY = prev[key].y || 0;
+                        return { ...prev, [key]: { ...prev[key], y: Math.max(0, currentY - HEIGHT_INCREMENT) } };
+                    }
+                    return prev;
+                });
+                break;
+            case 'toggle':
+                updateFurniture(prev => {
+                    if (prev[key]) {
+                        return { ...prev, [key]: { ...prev[key], isOn: !prev[key].isOn } };
+                    }
+                    return prev;
+                });
+                break;
             case 'close': break;
             default: break;
         }
         setContextMenu(prev => ({ ...prev, visible: false }));
-    }, [deleteObject, rotateObject, snapToWall, startMoveObject]);
+    }, [deleteObject, rotateObject, snapToWall, startMoveObject, updateFurniture]);
 
     useEffect(() => {
         const closeMenu = () => {
@@ -1646,7 +2209,7 @@ export default function Edit() {
     }, [contextMenu.visible]);
 
     function CanvasContent({
-                               getKey, rotateObject, snapToWall, checkGridExpansion, selectedTool, selectedColor, furniture, walls, floorTiles, hoveredCell, setHoveredCell, setFloorTiles, setWalls, setFurniture, isDragging, draggedType, draggedSubType, phantomObjectPosition, setPhantomObjectPosition, phantomObjectRotation, setPhantomObjectRotation, setIsDragging, setDraggedType, setDraggedSubType, handleContextMenu, keyPressed, targetCameraPosition, targetCameraQuaternion, mobileMovementInput, cameraRotationInput, cameraVerticalInput, updateNeighboringWindows, draggedItemData, setDraggedItemData, contextMenuTargetKey
+                               getKey, rotateObject, snapToWall, checkGridExpansion, selectedTool, selectedColor, furniture, walls, floorTiles, hoveredCell, setHoveredCell, setFloorTiles, setWalls, setFurniture, isDragging, draggedType, draggedSubType, phantomObjectPosition, setPhantomObjectPosition, phantomObjectRotation, setPhantomObjectRotation, setIsDragging, setDraggedType, setDraggedSubType, handleContextMenu, keyPressed, targetCameraPosition, targetCameraQuaternion, mobileMovementInput, cameraRotationInput, cameraVerticalInput, updateNeighboringWindows, draggedItemData, setDraggedItemData, contextMenuTargetKey, graphicsSettings
                            }) {
         const { gl, camera } = useThree();
         const PI_2 = Math.PI / 2;
@@ -1710,7 +2273,7 @@ export default function Edit() {
                     return;
                 }
                 if (!phantomObjectPosition) {
-                    if (draggedItemData) { // Cancel drag if dropped outside grid
+                    if (draggedItemData) {
                         const { originalKey, ...item } = draggedItemData;
                         setFurniture(prev => ({ ...prev, [originalKey]: item }));
                     }
@@ -1725,7 +2288,7 @@ export default function Edit() {
                 else if (draggedType === TOOL_TYPES.furniture) {
                     if (isPlacementValid) {
                         const phantomDimensions = Object.values(FURNITURE_CATEGORIES).flat().find(item => item.type === draggedSubType)?.dimensions;
-                        const newFurniture = { type: draggedSubType, color: draggedItemData ? draggedItemData.color : selectedColor, rotation: phantomObjectRotation, offsetX: 0, offsetZ: 0, isSnapped: false, dimensions: phantomDimensions, neighborLeft: false, neighborRight: false, neighborFront: false, neighborBack: false };
+                        const newFurniture = { type: draggedSubType, color: draggedItemData ? draggedItemData.color : selectedColor, rotation: phantomObjectRotation, offsetX: 0, offsetZ: 0, y: draggedItemData?.y || 0, isSnapped: false, dimensions: phantomDimensions, neighborLeft: false, neighborRight: false, neighborFront: false, neighborBack: false, isOn: true };
                         setFurniture((prev) => { let updated = { ...prev, [key]: newFurniture }; if (draggedSubType === 'window') { updated = updateNeighboringWindows(finalX, finalZ, updated); [getKey(finalX - 1, finalZ), getKey(finalX + 1, finalZ), getKey(finalX, finalZ - 1), getKey(finalX, finalZ + 1)].forEach(nKey => { if (updated[nKey]?.type === 'window') updated = updateNeighboringWindows(...nKey.split(',').map(Number), updated); }); } return updated; });
                         if (['door', 'window'].includes(draggedSubType)) { setWalls((prev) => ({ ...prev, [key]: { color: selectedColor, hasOpening: true, rotation: phantomObjectRotation } })); }
                         else { setWalls((prev) => { const copy = { ...prev }; if (copy[key] && !copy[key].hasOpening) delete copy[key]; return copy; }); }
@@ -1740,35 +2303,66 @@ export default function Edit() {
             const currentCanvas = gl.domElement; if (currentCanvas) currentCanvas.addEventListener('pointerup', handleGlobalPointerUp);
             return () => { if (currentCanvas) currentCanvas.removeEventListener('pointerup', handleGlobalPointerUp); };
         }, [isDragging, draggedType, draggedSubType, phantomObjectPosition, getKey, floorTiles, furniture, walls, setFurniture, setWalls, setFloorTiles, selectedColor, phantomObjectRotation, setIsDragging, setDraggedType, setDraggedSubType, setPhantomObjectPosition, setPhantomObjectRotation, checkGridExpansion, gl, updateNeighboringWindows, draggedItemData]);
+
         const renderComponent = useCallback((data, isPhantom = false, isPlacementValid = true, isHighlighted = false) => {
-            const { type: itemType, color, rotation = 0, neighborLeft, neighborRight, neighborFront, neighborBack } = data;
+            const { type: itemType, color, rotation = 0, neighborLeft, neighborRight, neighborFront, neighborBack, isOn } = data;
             const currentPhantomMaterial = isPhantom && !isPlacementValid ? invalidPhantomMaterial : phantomMaterial;
             const Component = FURNITURE_COMPONENTS[itemType];
-            if (Component) return <Component color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} neighborLeft={neighborLeft} neighborRight={neighborRight} neighborFront={neighborFront} neighborBack={neighborBack} phantomMaterial={currentPhantomMaterial} />;
+
+            if (Component) return <Component color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} neighborLeft={neighborLeft} neighborRight={neighborRight} neighborFront={neighborFront} neighborBack={neighborBack} phantomMaterial={currentPhantomMaterial} isOn={isOn} graphicsSettings={graphicsSettings} />;
             if (itemType === TOOL_TYPES.floor) return <FloorPhantom />;
             if (itemType === TOOL_TYPES.wall) { const key = hoveredCell ? getKey(hoveredCell.x, hoveredCell.z) : null; const hasOpening = key && furniture[key] && ['door', 'window'].includes(furniture[key].type); return <WallPhantom hasOpening={hasOpening} />; }
             return null;
-        }, [hoveredCell, furniture, getKey]);
-        const gridHelper = useMemo(() => new GridHelper(gridSize * 2, gridSize * 2, '#4B5563', '#4B5563'), [gridSize]);
-        const renderGridObjects = useCallback(() => {
-            const items = [];
-            for (let z = -gridSize; z <= gridSize; z++) {
-                for (let x = -gridSize; x <= gridSize; x++) {
-                    const key = getKey(x, z);
-                    const floorData = floorTiles[key]; const wallData = walls[key]; const furnitureData = furniture[key];
-                    const isHovered = hoveredCell && hoveredCell.x === x && hoveredCell.z === z;
-                    const isContextMenuTarget = contextMenuTargetKey === key;
-                    const isHighlighted = !isDragging && (isHovered || isContextMenuTarget);
+        }, [hoveredCell, furniture, getKey, graphicsSettings]);
 
-                    if (floorData) items.push(<mesh key={`floor-${x}-${z}`} position={[x, FLOOR_LEVEL, z]} onPointerDown={(e) => handlePointerDown(e, x, z)} onPointerMove={handlePointerMove} onContextMenu={(e) => handleContextMenu(e, x, z)} castShadow receiveShadow><boxGeometry args={[1, 0.1, 1]} /><meshStandardMaterial color={floorData} /></mesh>);
-                    if (wallData) items.push(<group key={`wall-${x}-${z}`} position={[x, FLOOR_LEVEL, z]} rotation={[0, wallData.rotation || 0, 0]} onPointerDown={(e) => handlePointerDown(e, x, z)} onPointerMove={handlePointerMove} onContextMenu={(e) => handleContextMenu(e, x, z)}><Wall color={wallData.color} hasOpening={wallData.hasOpening} isHighlighted={isHighlighted} /></group>);
-                    if (furnitureData) { const positionX = x + (furnitureData.offsetX || 0); const positionZ = z + (furnitureData.offsetZ || 0); items.push(<group key={`furniture-${x}-${z}`} position={[positionX, FLOOR_LEVEL, positionZ]} onPointerDown={(e) => handlePointerDown(e, x, z)} onPointerMove={handlePointerMove} onContextMenu={(e) => handleContextMenu(e, x, z)}>{renderComponent({ ...furnitureData, position: { x: positionX, z: positionZ } }, false, true, isHighlighted)}</group>); }
-                }
-            }
-            return items;
-        }, [gridSize, getKey, floorTiles, walls, furniture, renderComponent, hoveredCell, handlePointerDown, handlePointerMove, handleContextMenu, contextMenuTargetKey, isDragging]);
+        const gridHelper = useMemo(() => new GridHelper(gridSize * 2, gridSize * 2, '#4B5563', '#4B5563'), [gridSize]);
+
+        const MemoizedFloors = React.memo(({ items }) => (
+            <>
+                {Object.entries(items).map(([key, color]) => {
+                    const [x, z] = key.split(',').map(Number);
+                    return <mesh key={`floor-${key}`} position={[x, FLOOR_LEVEL, z]} onPointerDown={(e) => handlePointerDown(e, x, z)} onPointerMove={handlePointerMove} onContextMenu={(e) => handleContextMenu(e, x, z)} castShadow receiveShadow><boxGeometry args={[1, 0.1, 1]} /><meshStandardMaterial color={color} /></mesh>;
+                })}
+            </>
+        ));
+
+        const MemoizedWalls = React.memo(({ items }) => (
+            <>
+                {Object.entries(items).map(([key, wallData]) => {
+                    const [x, z] = key.split(',').map(Number);
+                    const isHighlighted = !isDragging && ((hoveredCell && hoveredCell.x === x && hoveredCell.z === z) || contextMenuTargetKey === key);
+                    return <group key={`wall-${key}`} position={[x, FLOOR_LEVEL, z]} rotation={[0, wallData.rotation || 0, 0]} onPointerDown={(e) => handlePointerDown(e, x, z)} onPointerMove={handlePointerMove} onContextMenu={(e) => handleContextMenu(e, x, z)}><Wall color={wallData.color} hasOpening={wallData.hasOpening} isHighlighted={isHighlighted} /></group>;
+                })}
+            </>
+        ));
+
+        const MemoizedFurniture = React.memo(({ items }) => (
+            <>
+                {Object.entries(items).map(([key, furnitureData]) => {
+                    const [x, z] = key.split(',').map(Number);
+                    const isHighlighted = !isDragging && ((hoveredCell && hoveredCell.x === x && hoveredCell.z === z) || contextMenuTargetKey === key);
+                    const positionX = x + (furnitureData.offsetX || 0);
+                    const positionZ = z + (furnitureData.offsetZ || 0);
+                    const positionY = FLOOR_LEVEL + (furnitureData.y || 0);
+                    return <group key={`furniture-${key}`} position={[positionX, positionY, positionZ]} onPointerDown={(e) => handlePointerDown(e, x, z)} onPointerMove={handlePointerMove} onContextMenu={(e) => handleContextMenu(e, x, z)}>{renderComponent({ ...furnitureData, position: { x: positionX, z: positionZ } }, false, true, isHighlighted)}</group>;
+                })}
+            </>
+        ));
+
         const isPhantomPlacementValid = useMemo(() => { if (!phantomObjectPosition) return false; const key = getKey(phantomObjectPosition.x, phantomObjectPosition.z); return floorTiles[key] && (!furniture[key] || ['door', 'window'].includes(furniture[key]?.type)); }, [phantomObjectPosition, floorTiles, furniture, getKey]);
-        return (<><ambientLight intensity={0.5} /><directionalLight position={[20, 30, 20]} intensity={1} castShadow /><primitive object={gridHelper} position={[0, FLOOR_LEVEL + 0.01, 0]} />{hoveredCell && !isDragging && (<mesh position={[hoveredCell.x, FLOOR_LEVEL + 0.02, hoveredCell.z]} material={hoverMaterial} castShadow receiveShadow><boxGeometry args={[1, 0.01, 1]} /></mesh>)}{isDragging && draggedType && phantomObjectPosition && (<group position={[phantomObjectPosition.x, FLOOR_LEVEL, phantomObjectPosition.z]}>{renderComponent({ type: draggedType === TOOL_TYPES.furniture ? draggedSubType : draggedType, color: draggedItemData ? draggedItemData.color : selectedColor, rotation: phantomObjectRotation }, true, isPhantomPlacementValid)}</group>)}<mesh position={[0, FLOOR_LEVEL, 0]} rotation={[-Math.PI / 2, 0, 0]} onPointerMove={handlePointerMove} onPointerDown={(e) => handlePointerDown(e, Math.round(e.point.x), Math.round(e.point.z))} onContextMenu={(e) => { e.stopPropagation(); if (hoveredCell) handleContextMenu(e, hoveredCell.x, hoveredCell.z); }} visible={true}><planeGeometry args={[gridSize * 2 + 1, gridSize * 2 + 1]} /><meshStandardMaterial transparent opacity={0.0} /></mesh>{renderGridObjects()}</>);
+
+        return (<>
+            <ambientLight intensity={0.5} />
+            <directionalLight position={[20, 30, 20]} intensity={1} castShadow={graphicsSettings.shadows} />
+            <primitive object={gridHelper} position={[0, FLOOR_LEVEL + 0.01, 0]} />
+            {hoveredCell && !isDragging && (<mesh position={[hoveredCell.x, FLOOR_LEVEL + 0.02, hoveredCell.z]} material={hoverMaterial} castShadow receiveShadow><boxGeometry args={[1, 0.01, 1]} /></mesh>)}
+            {isDragging && draggedType && phantomObjectPosition && (<group position={[phantomObjectPosition.x, FLOOR_LEVEL, phantomObjectPosition.z]}>{renderComponent({ type: draggedType === TOOL_TYPES.furniture ? draggedSubType : draggedType, color: draggedItemData ? draggedItemData.color : selectedColor, rotation: phantomObjectRotation }, true, isPhantomPlacementValid)}</group>)}
+            <mesh position={[0, FLOOR_LEVEL, 0]} rotation={[-Math.PI / 2, 0, 0]} onPointerMove={handlePointerMove} onPointerDown={(e) => handlePointerDown(e, Math.round(e.point.x), Math.round(e.point.z))} onContextMenu={(e) => { e.stopPropagation(); if (hoveredCell) handleContextMenu(e, hoveredCell.x, hoveredCell.z); }} visible={true}><planeGeometry args={[gridSize * 2 + 1, gridSize * 2 + 1]} /><meshStandardMaterial transparent opacity={0.0} /></mesh>
+            <MemoizedFloors items={floorTiles} />
+            <MemoizedWalls items={walls} />
+            <MemoizedFurniture items={furniture} />
+            <Preload all />
+        </>);
     }
 
     const handleFurnitureDragStart = useCallback((type) => { setSelectedTool(TOOL_TYPES.furniture); setIsDragging(true); setDraggedType(TOOL_TYPES.furniture); setDraggedSubType(type); setPhantomObjectRotation(type === 'painting' ? Math.PI : 0); setDraggedItemData(null); }, []);
@@ -1783,6 +2377,7 @@ export default function Edit() {
             if (roomIndex !== -1) {
                 currentUser.rooms[roomIndex] = { ...currentUser.rooms[roomIndex], name: roomName, gridSize, walls, furniture, floorTiles, userColors, selectedColor, cameraPosition: targetCameraPosition.current.toArray(), cameraQuaternion: targetCameraQuaternion.current.toArray() };
                 localStorage.setItem('user', JSON.stringify(currentUser));
+                setIsDirty(false);
                 setModalContent({ title: 'Збережено', message: `Стан кімнати "${roomName}" успішно збережено!`, onConfirm: () => { setShowModal(false); navigate('/'); }, isConfirm: false }); setShowModal(true);
             } else { setModalContent({ title: 'Помилка збереження', message: 'Кімнату з таким ID не знайдено для оновлення. Переконайтеся, що вона існує.', onConfirm: () => setShowModal(false), isConfirm: false }); setShowModal(true); }
         } catch (error) { setModalContent({ title: 'Помилка збереження', message: 'Помилка під час збереження стану кімнати. Перевірте консоль для деталей.', onConfirm: () => setShowModal(false), isConfirm: false }); setShowModal(true); }
@@ -1799,6 +2394,7 @@ export default function Edit() {
                     setRoomName(roomToLoad.name || `Кімната ${roomId}`); setGridSize(roomToLoad.gridSize || INITIAL_GRID_SIZE); setWalls(roomToLoad.walls || {}); setFurniture(roomToLoad.furniture || {}); setFloorTiles(roomToLoad.floorTiles || {}); setUserColors(roomToLoad.userColors || []); setSelectedColor(roomToLoad.selectedColor || BASE_COLORS[0]);
                     if (roomToLoad.cameraPosition && roomToLoad.cameraQuaternion) { targetCameraPosition.current.set(...roomToLoad.cameraPosition); targetCameraQuaternion.current.set(...roomToLoad.cameraQuaternion); }
                     else { targetCameraPosition.current.set(...INITIAL_CAMERA_POSITION); const tempCamera = new THREE.Camera(); tempCamera.position.set(...INITIAL_CAMERA_POSITION); tempCamera.lookAt(INITIAL_LOOK_AT_TARGET); targetCameraQuaternion.current.copy(tempCamera.quaternion); }
+                    setIsDirty(false);
                 } else { setModalContent({ title: 'Кімнату не знайдено', message: 'Кімнату не знайдено. Був ініційований новий проект.', onConfirm: () => setShowModal(false), isConfirm: false }); setShowModal(true); resetAllState(); }
             } catch (error) { setModalContent({ title: 'Помилка завантаження', message: 'Помилка під час завантаження стану кімнати. Перевірте консоль для деталей.', onConfirm: () => setShowModal(false), isConfirm: false }); setShowModal(true); resetAllState(); }
         };
@@ -1826,19 +2422,45 @@ export default function Edit() {
 
     const addUserColor = useCallback(() => {
         if (customColor && !userColors.includes(customColor.toUpperCase()) && !BASE_COLORS.find(c => c.toUpperCase() === customColor.toUpperCase())) {
-            setUserColors(prev => [...prev, customColor]);
+            updateUserColors(prev => [...prev, customColor]);
         }
-    }, [customColor, userColors]);
+    }, [customColor, userColors, updateUserColors]);
 
     return (
         <div id="root" style={{ ...styles.root, display: 'flex', flexDirection: 'column', height: '100vh', background: '#1F2937' }}>
-            <div ref={canvasRef} style={{ flex: 1, position: 'relative' }}>
-                <Canvas shadows camera={{ position: INITIAL_CAMERA_POSITION, fov: 60 }} onContextMenu={(e) => e.preventDefault()}>
-                    <CanvasContent
-                        getKey={getKey} rotateObject={rotateObject} snapToWall={snapToWall} checkGridExpansion={checkGridExpansion} selectedTool={selectedTool} selectedColor={selectedColor} furniture={furniture} walls={walls} floorTiles={floorTiles} hoveredCell={hoveredCell} setHoveredCell={setHoveredCell} canvasRef={canvasRef} setFloorTiles={setFloorTiles} setWalls={setWalls} setFurniture={setFurniture} isDragging={isDragging} draggedType={draggedType} draggedSubType={draggedSubType} phantomObjectPosition={phantomObjectPosition} setPhantomObjectPosition={setPhantomObjectPosition} phantomObjectRotation={phantomObjectRotation} setPhantomObjectRotation={setPhantomObjectRotation} setIsDragging={setIsDragging} setDraggedType={setDraggedType} setDraggedSubType={setDraggedSubType} handleContextMenu={handleContextMenu} keyPressed={keyPressed} targetCameraPosition={targetCameraPosition} targetCameraQuaternion={targetCameraQuaternion} mobileMovementInput={mobileMovementInput} cameraRotationInput={cameraRotationInput} cameraVerticalInput={cameraVerticalInput} updateNeighboringWindows={updateNeighboringWindows} draggedItemData={draggedItemData} setDraggedItemData={setDraggedItemData} contextMenuTargetKey={contextMenuTargetKey}
-                    />
-                </Canvas>
-                <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 1000 }}>
+            <style>{`
+                .inventory-panel::-webkit-scrollbar {
+                    display: none;
+                }
+                .inventory-panel {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+            `}</style>
+
+            <GpuDetector onDetect={handleGpuDetect} />
+
+            {isLoading && <Preloader />}
+
+            <div ref={canvasRef} style={{ flex: 1, position: 'relative', visibility: isLoading ? 'hidden' : 'visible' }}>
+                {isGpuReady && (
+                    <Canvas
+                        shadows={graphicsSettings.shadows}
+                        dpr={graphicsSettings.dpr}
+                        gl={{ antialias: true, powerPreference: 'high-performance', physicallyCorrectLights: true }}
+                        camera={{ position: INITIAL_CAMERA_POSITION, fov: 60 }}
+                        onContextMenu={(e) => e.preventDefault()}
+                        key={JSON.stringify(graphicsSettings)}
+                    >
+                        <CanvasContent
+                            getKey={getKey} rotateObject={rotateObject} snapToWall={snapToWall} checkGridExpansion={checkGridExpansion} selectedTool={selectedTool} selectedColor={selectedColor} furniture={furniture} walls={walls} floorTiles={floorTiles} hoveredCell={hoveredCell} setHoveredCell={setHoveredCell} canvasRef={canvasRef} setFloorTiles={updateFloorTiles} setWalls={updateWalls} setFurniture={updateFurniture} isDragging={isDragging} draggedType={draggedType} draggedSubType={draggedSubType} phantomObjectPosition={phantomObjectPosition} setPhantomObjectPosition={setPhantomObjectPosition} phantomObjectRotation={phantomObjectRotation} setPhantomObjectRotation={setPhantomObjectRotation} setIsDragging={setIsDragging} setDraggedType={setDraggedType} setDraggedSubType={setDraggedSubType} handleContextMenu={handleContextMenu} keyPressed={keyPressed} targetCameraPosition={targetCameraPosition} targetCameraQuaternion={targetCameraQuaternion} mobileMovementInput={mobileMovementInput} cameraRotationInput={cameraRotationInput} cameraVerticalInput={cameraVerticalInput} updateNeighboringWindows={updateNeighboringWindows} draggedItemData={draggedItemData} setDraggedItemData={setDraggedItemData} contextMenuTargetKey={contextMenuTargetKey}
+                            graphicsSettings={graphicsSettings}
+                        />
+                        <FpsStabilizer onStable={() => setIsLoading(false)} />
+                    </Canvas>
+                )}
+                <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 1000, display: 'flex', gap: '10px' }}>
+                    <HoverButton onClick={() => setShowGraphicsSettings(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em', background: '#6c757d' }} hoverStyle={{ ...styles.tutorialButtonHover, background: '#5a6268' }}>Налаштування графіки</HoverButton>
                     <HoverButton onClick={() => setShowTutorial(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.tutorialButtonHover}>Показати туторіал</HoverButton>
                 </div>
                 {isMobile && (<>
@@ -1860,7 +2482,7 @@ export default function Edit() {
                     </div>
                 </>)}
             </div>
-            <div style={styles.inventoryPanel}>
+            <div className="inventory-panel" style={{...styles.inventoryPanel, visibility: isLoading ? 'hidden' : 'visible' }}>
                 <div style={styles.inventorySection}>
                     <h3 style={styles.inventoryTitle}>Інструменти</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1893,10 +2515,17 @@ export default function Edit() {
                 <div style={{ ...styles.inventorySection, minWidth: '150px', flex: '0 0 auto', marginTop: 'auto' }}>
                     <HoverButton onClick={saveRoomState} style={{ ...styles.buttonBase, ...styles.saveButton }} hoverStyle={styles.saveButtonHover}>Зберегти</HoverButton>
                     <HoverButton onClick={resetAllState} style={{ ...styles.buttonBase, ...styles.clearButton }} hoverStyle={styles.clearButtonHover}>Очистити все</HoverButton>
-                    <HoverButton onClick={() => { setModalContent({ title: 'Вийти без збереження', message: 'Ваші зміни не збережено. Ви впевнені, що хочете вийти?', onConfirm: () => { setShowModal(false); document.location.href = "/"; }, isConfirm: true }); setShowModal(true); }} style={{ ...styles.buttonBase, ...styles.exitButton }} hoverStyle={styles.exitButtonHover}>Вийти без збереження</HoverButton>
+                    <HoverButton onClick={() => {
+                        if (isDirty) {
+                            setModalContent({ title: 'Вийти без збереження', message: 'Ваші зміни не збережено. Ви впевнені, що хочете вийти?', onConfirm: () => { setShowModal(false); navigate('/'); }, isConfirm: true }); setShowModal(true);
+                        } else {
+                            navigate('/');
+                        }
+                    }} style={{ ...styles.buttonBase, ...styles.exitButton }} hoverStyle={styles.exitButtonHover}>Вийти</HoverButton>
                 </div>
             </div>
             <Tutorial show={showTutorial} onClose={() => setShowTutorial(false)} />
+            <GraphicsSettingsModal show={showGraphicsSettings} onClose={() => setShowGraphicsSettings(false)} settings={graphicsSettings} onSettingsChange={handleGraphicsSettingsChange} onPresetChange={handlePresetChange} />
             <Modal show={showModal} title={modalContent.title} message={modalContent.message} onClose={() => setShowModal(false)} onConfirm={modalContent.onConfirm} isConfirm={modalContent.isConfirm} />
             <ContextMenu
                 menuState={contextMenu}
