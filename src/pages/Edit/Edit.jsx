@@ -453,7 +453,7 @@ const ContextMenu = ({ menuState, onAction, onColorSelect, baseColors, userColor
     const { x, y, target } = menuState;
     const isActionable = target.type === 'furniture' && target.item.type !== 'door' && target.item.type !== 'window';
     const isToggleable = target.item && ['lamp', 'ceilingLamp', 'tv', 'aquarium', 'rgbStrip', 'wallMountedTV'].includes(target.item.type);
-    const toggleText = target?.item?.isOn ? 'Выключить' : 'Включить';
+    const toggleText = target?.item?.isOn ? 'Вимкнути' : 'Увімкнути';
 
     const handleAction = (action) => {
         onAction(action, target.key);
