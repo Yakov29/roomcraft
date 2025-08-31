@@ -36,7 +36,6 @@ function App() {
     };
   }, [location]);
 
-  // Скрываем Header на странице /edit/:id
   const showHeader = !location.pathname.startsWith("/edit/");
 
   return (
