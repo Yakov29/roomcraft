@@ -322,7 +322,7 @@ const FURNITURE_CATEGORIES = {
         { type: 'wardrobe', label: 'Шафа для одягу', dimensions: { width: 1.5, depth: 0.6, height: 2.2 } },
         { type: 'dresser', label: 'Комод', dimensions: { width: 1.2, depth: 0.5, height: 0.9 } },
         { type: 'nightstand', label: 'Тумбочка', dimensions: { width: 0.5, depth: 0.4, height: 0.6 } },
-        { type: 'wallShelf', label: 'Настенная полка', dimensions: { width: 1.2, depth: 0.25, height: 0.1 } },
+        { type: 'wallShelf', label: 'Настінна полиця', dimensions: { width: 1.2, depth: 0.25, height: 0.1 } },
     ],
     '🚪 Двері та вікна': [
         { type: 'door', label: 'Двері', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
