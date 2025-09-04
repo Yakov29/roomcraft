@@ -8,10 +8,9 @@
   justify-content: center;
   align-items: center;
   text-align: center;
-  padding: 0;
+  padding: 20px 10px;
   box-sizing: border-box;
   z-index: 1;
-  padding: 20px 10px;
 }
 
 .rooms__title {
@@ -55,8 +54,6 @@
   cursor: default;
 }
 
-
-
 .rooms__name {
   font-size: 24px;
   margin-bottom: 8px;
@@ -91,8 +88,13 @@
   background-color: #1b74e4;
 }
 
-.rooms__action-button--edit:hover {
-  background-color: #155abf;
+
+.rooms__action-button--rename {
+  background-color: #ed8936;
+}
+
+.rooms__action-button--rename:hover {
+  background-color: #dd6b20;
 }
 
 .rooms__action-button--delete {
@@ -160,6 +162,107 @@
   height: 100%;
   opacity: 0;
   cursor: pointer;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.modal {
+  background: #2a5298;
+  color: #e1e6f0;
+  border-radius: 15px;
+  padding: 25px 30px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 20px rgba(27, 116, 228, 0.4);
+  animation: scaleIn 0.3s ease forwards;
+}
+
+.modal__title {
+  font-size: 22px;
+  margin-bottom: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+.modal__input {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 12px;
+  border: 2px solid #a0aec0;
+  margin-bottom: 20px;
+  font-size: 16px;
+  outline: none;
+  background-color: #f0f4f8;
+  color: #1a202c;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+
+
+.modal__buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.modal__button {
+  flex: 1;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.modal__button--cancel {
+  background-color: #e53e3e;
+  color: #fff;
+}
+
+.modal__button--cancel:hover {
+  background-color: #c53030;
+}
+
+.modal__button--save {
+  background-color: #38a169;
+  color: #fff;
+}
+
+.modal__button--save:hover {
+  background-color: #2f855a;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 768px) {

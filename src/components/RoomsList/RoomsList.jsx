@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./RoomsList.css"
+import "./RoomsList.css";
 
 const Container = ({ children }) => <div className="container mx-auto px-4">{children}</div>;
 
@@ -13,6 +13,9 @@ const RoomsList = () => {
   const [userData, setUserData] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRoom, setEditingRoom] = useState(null);
+  const [newRoomName, setNewRoomName] = useState("");
 
   useEffect(() => {
     AOS.init({ duration: 800, once: true });
@@ -28,9 +31,7 @@ const RoomsList = () => {
   }, []);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobileOrTablet(window.innerWidth <= 1024);
-    };
+    const handleResize = () => setIsMobileOrTablet(window.innerWidth <= 1024);
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -52,7 +53,7 @@ const RoomsList = () => {
   };
 
   const handleDownload = (room) => {
-    const filename = `${room.name.replace(/\s/g, '_')}_room.rmc`;
+    const filename = `${room.name.replace(/\s/g, "_")}_room.rmc`;
     const jsonStr = JSON.stringify(room, null, 2);
     const blob = new Blob([jsonStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -75,9 +76,7 @@ const RoomsList = () => {
         let uploadedRoom = JSON.parse(e.target.result);
 
         if (uploadedRoom && uploadedRoom.id && uploadedRoom.name) {
-          if (!uploadedRoom.createdAt) {
-            uploadedRoom.createdAt = new Date().toISOString().split('T')[0];
-          }
+          if (!uploadedRoom.createdAt) uploadedRoom.createdAt = new Date().toISOString().split('T')[0];
 
           const isDuplicate = rooms.some(room => room.id === uploadedRoom.id);
           if (isDuplicate) {
@@ -100,84 +99,142 @@ const RoomsList = () => {
     reader.readAsText(file);
   };
 
+  const openRenameModal = (room) => {
+    setEditingRoom(room);
+    setNewRoomName(room.name);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveName = () => {
+    if (!newRoomName.trim()) return;
+    const updatedRooms = rooms.map((room) =>
+      room.id === editingRoom.id ? { ...room, name: newRoomName } : room
+    );
+    const updatedUser = { ...userData, rooms: updatedRooms };
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+    setRooms(updatedRooms);
+    setUserData(updatedUser);
+    setIsModalOpen(false);
+    setEditingRoom(null);
+    setNewRoomName("");
+    document.location.reload()
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingRoom(null);
+    setNewRoomName("");
+  };
+
   return (
-      <section className="rooms-list bg-gray-100 py-12 min-h-screen">
-        <Container>
-          <h2 className="rooms__title text-4xl font-extrabold text-center text-gray-800 mb-10" data-aos="fade-down">
-            Кімнати користувача
-          </h2>
-          {rooms.length === 0 ? (
-              <p className="rooms__none text-xl text-center text-gray-600" data-aos="fade-up">
-                У вас ще немає кімнат. Створіть нову!
-              </p>
-          ) : (
-              <ul className="rooms__list grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {rooms.map((room, index) => (
-                    <li
-                        key={room.id}
-                        className="rooms__item bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col justify-between"
-                        data-aos="fade-up"
-                        data-aos-delay={index * 100}
+    <section className="rooms-list bg-gray-100 py-12 min-h-screen">
+      <Container>
+        <h2 className="rooms__title text-4xl font-extrabold text-center text-gray-800 mb-10" data-aos="fade-down">
+          Кімнати користувача
+        </h2>
+
+        {rooms.length === 0 ? (
+          <p className="rooms__none text-xl text-center text-gray-600" data-aos="fade-up">
+            У вас ще немає кімнат. Створіть нову!
+          </p>
+        ) : (
+          <ul className="rooms__list grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {rooms.map((room, index) => (
+              <li
+                key={room.id}
+                className="rooms__item"
+                data-aos="fade-up"
+                data-aos-delay={index * 100}
+              >
+                <div className="cursor-pointer mb-4">
+                  <h4 className="rooms__name">{room.name}</h4>
+                  <p className="rooms__date">Створено: {room.createdAt}</p>
+                </div>
+                <div className="rooms__buttons">
+                  {!isMobileOrTablet && (
+                    <button
+                      className="rooms__action-button rooms__action-button--edit"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(room.id);
+                      }}
                     >
-                      <div className="cursor-pointer mb-4">
-                        <h4 className="rooms__name text-2xl font-semibold text-gray-900 mb-2">{room.name}</h4>
-                        <p className="rooms__date text-sm text-gray-500">Створено: {room.createdAt}</p>
-                      </div>
-                      <div className="rooms__buttons flex flex-wrap gap-3 mt-auto">
-                        {!isMobileOrTablet && (
-                            <button
-                                className="rooms__action-button rooms__action-button--edit bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow-md transition-colors duration-200"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(room.id);
-                                }}
-                            >
-                              Редагувати
-                            </button>
-                        )}
-                        <button
-                            className="rooms__action-button rooms__action-button--delete bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full shadow-md transition-colors duration-200"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(room.id);
-                            }}
-                        >
-                          Видалити
-                        </button>
-                        <button
-                            className="rooms__action-button rooms__action-button--download bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full shadow-md transition-colors duration-200"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownload(room);
-                            }}
-                        >
-                          Експортувати (.rmc)
-                        </button>
-                      </div>
-                    </li>
-                ))}
-              </ul>
-          )}
-          <div className="rooms__actions flex flex-col sm:flex-row justify-center gap-4 mt-12" data-aos="fade-up" data-aos-delay={rooms.length * 100}>
-            <button
-                className="rooms__button bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-colors duration-200"
-                onClick={() => navigate("/create")}
-            >
-              Створити нову
-            </button>
-            <label htmlFor="upload-room-file" className="rooms__button rooms__button--upload bg-yellow-500 hover:bg-yellow-600 text-gray-800 font-bold py-3 px-6 rounded-full shadow-lg transition-colors duration-200 cursor-pointer text-center">
-              Імпортувати кімнату (.rmc / .json)
-              <input
-                  id="upload-room-file"
-                  type="file"
-                  accept=".rmc, .json"
-                  onChange={handleUpload}
-                  style={{ display: "none" }}
-              />
-            </label>
+                      Редагувати
+                    </button>
+                  )}
+                  <button
+                    className="rooms__action-button rooms__action-button--rename"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openRenameModal(room);
+                    }}
+                  >
+                    Переименувати 
+                  </button>
+                  <button
+                    className="rooms__action-button rooms__action-button--delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(room.id);
+                    }}
+                  >
+                    Видалити
+                  </button>
+                  <button
+                    className="rooms__action-button rooms__action-button--download"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(room);
+                    }}
+                  >
+                    Експортувати (.rmc)
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="rooms__actions" data-aos="fade-up" data-aos-delay={rooms.length * 100}>
+          <button
+            className="rooms__button"
+            onClick={() => navigate("/create")}
+          >
+            Створити нову
+          </button>
+          <label className="rooms__button rooms__button--upload">
+            Імпортувати кімнату (.rmc / .json)
+            <input
+              type="file"
+              accept=".rmc, .json"
+              onChange={handleUpload}
+            />
+          </label>
+        </div>
+      </Container>
+
+      {isModalOpen && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal__title">Переименувати кімнату</h3>
+            <input
+              className="modal__input"
+              type="text"
+              value={newRoomName}
+              onChange={(e) => setNewRoomName(e.target.value)}
+            />
+            <div className="modal__buttons">
+              <button className="modal__button modal__button--cancel" onClick={closeModal}>
+                Відмінити
+              </button>
+              <button className="modal__button modal__button--save" onClick={handleSaveName}>
+                Переименовать
+              </button>
+            </div>
           </div>
-        </Container>
-      </section>
+        </div>
+      )}
+    </section>
   );
 };
 
