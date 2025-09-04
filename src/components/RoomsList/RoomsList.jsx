@@ -228,7 +228,7 @@ const RoomsList = () => {
                 Відмінити
               </button>
               <button className="modal__button modal__button--save" onClick={handleSaveName}>
-                Переименовать
+                Переименувати
               </button>
             </div>
           </div>
