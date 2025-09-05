@@ -51,6 +51,14 @@ const Footer = () => {
                             </a>
                         </p>
                     </li>
+                    <li className="footer__item">
+                        <p className="footer__text">
+                            <FaInstagram /> Telegram:{" "}
+                            <a className="footer__link" href="https://t.me/zovutyakov" target="_blank" rel="noopener noreferrer">
+                                @zovutyakov
+                            </a>
+                        </p>
+                    </li>
                 </ul>
             </Container>
         </footer>
