@@ -1773,7 +1773,7 @@ const GraphicsSettingsModal = ({ show, onClose, settings, onSettingsChange, onPr
                             <option value={16}>16x</option>
                         </select>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {/* <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: '1.1em' }}>Відображення в дзеркалі</span>
                         <button
                             onClick={() => handleToggle('reflections')}
@@ -1781,7 +1781,7 @@ const GraphicsSettingsModal = ({ show, onClose, settings, onSettingsChange, onPr
                         >
                             {settings.reflections ? 'Увімк.' : 'Вимк.'}
                         </button>
-                    </div>
+                    </div> */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: '1.1em' }}>Динамічні тіні</span>
                         <button

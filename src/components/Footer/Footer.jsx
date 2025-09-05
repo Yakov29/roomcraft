@@ -3,7 +3,7 @@ import "./Footer.css";
 import Container from "../Container/Container";
 import logo from "../../logo.png";
 import { CiMail } from "react-icons/ci";
-import { FaGithub, FaInstagram } from "react-icons/fa";
+import { FaGithub, FaInstagram, FaTelegram } from "react-icons/fa";
 
 import AOS from "aos";
 import "aos/dist/aos.css";
@@ -53,7 +53,7 @@ const Footer = () => {
                     </li>
                     <li className="footer__item">
                         <p className="footer__text">
-                            <FaInstagram /> Telegram:{" "}
+                            <FaTelegram /> Telegram:{" "}
                             <a className="footer__link" href="https://t.me/zovutyakov" target="_blank" rel="noopener noreferrer">
                                 @zovutyakov
                             </a>
