@@ -1,16 +1,13 @@
 .rooms-list {
   height: 100vh;
-  position: relative;
-  overflow: hidden;
-  background-color: var(--background-color);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  text-align: center;
+  background-color: var(--background-color);
   padding: 20px 10px;
+  padding-top: 100px;
   box-sizing: border-box;
-  z-index: 1;
 }
 
 .rooms__title {
@@ -25,19 +22,29 @@
   margin-top: 50px;
   padding: 0 10px;
 }
-
 .rooms__list {
-  position: relative;
-  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  margin-top: 20px;
-  padding: 0 10px;
   width: 100%;
   max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
+  max-height: 70vh;
+  overflow-y: auto;
+  margin: 0 auto;
+  padding: 0 10px;
+}
+
+.rooms__list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.rooms__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rooms__list::-webkit-scrollbar-thumb {
+  background-color: rgba(27, 116, 228, 0.5);
+  border-radius: 4px;
 }
 
 .rooms__item {
@@ -87,7 +94,6 @@
 .rooms__action-button--edit {
   background-color: #1b74e4;
 }
-
 
 .rooms__action-button--rename {
   background-color: #ed8936;
@@ -195,6 +201,7 @@
   font-weight: 700;
   text-align: center;
 }
+
 .modal__input {
   width: 100%;
   padding: 12px 15px;
@@ -207,8 +214,6 @@
   color: #1a202c;
   transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
 }
-
-
 
 .modal__buttons {
   display: flex;
@@ -269,6 +274,7 @@
   .rooms__list {
     gap: 20px;
     margin-top: 30px;
+    max-height: 65vh;
   }
 
   .rooms__item {
@@ -322,6 +328,7 @@
     flex-direction: column;
     gap: 16px;
     margin-top: 30px;
+    max-height: 60vh;
   }
 
   .rooms__item {

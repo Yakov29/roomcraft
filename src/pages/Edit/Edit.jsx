@@ -1122,96 +1122,103 @@ const Painting = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
     </group>
 ));
 
-const Door = React.memo(({ color = '#5A2D0C', rotation = 0, isHighlighted, isPhantom }) => (
-    <group rotation={[0, rotation, 0]}>
-        <mesh position={[0, WALL_HEIGHT / 2, 0]}>
-            <boxGeometry args={[0.85, WALL_HEIGHT - 0.2, 0.05]} />
-            <Material isPhantom={isPhantom} color={color} roughness={0.3} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, WALL_HEIGHT - 0.04, -0.03]}>
-            <boxGeometry args={[1.0, 0.1, 0.06]} />
-            <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
-        </mesh>
-        <mesh position={[-0.48, WALL_HEIGHT / 2, -0.03]}>
-            <boxGeometry args={[0.06, WALL_HEIGHT, 0.06]} />
-            <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
-        </mesh>
-        <mesh position={[0.48, WALL_HEIGHT / 2, -0.03]}>
-            <boxGeometry args={[0.06, WALL_HEIGHT, 0.06]} />
-            <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
-        </mesh>
-        <mesh position={[0.37, WALL_HEIGHT / 2, 0.035]}>
-            <boxGeometry args={[0.15, 0.04, 0.025]} />
-            <Material isPhantom={isPhantom} color="#FFD700" metalness={1} roughness={0.15} />
-        </mesh>
-        <mesh position={[0.37, WALL_HEIGHT / 2, -0.035]}>
-            <boxGeometry args={[0.15, 0.04, 0.025]} />
-            <Material isPhantom={isPhantom} color="#FFD700" metalness={1} roughness={0.15} />
-        </mesh>
-        {isHighlighted && (<Outlines thickness={0.02} color="#FFFF00" opacity={1} />)}
-    </group>
-));
+const Door = React.memo(({ color = '#5A2D0C', rotation = 0, isHighlighted, isPhantom }) => {
+  const doorHeight = WALL_HEIGHT * 0.7;
+  const doorWidth = 0.85;
+  const frameThickness = 0.05;
+  const handleHeight = doorHeight / 2;
+  const handleWidth = 0.15;
+  const handleDepth = 0.03;
+  const handleThickness = 0.02;
 
-const Window = React.memo(({ color, rotation, isHighlighted, isPhantom, neighborLeft, neighborRight, neighborFront, neighborBack }) => {
+  return (
+    <group rotation={[0, rotation, 0]}>
+      <mesh position={[0, doorHeight / 2, 0]}>
+        <boxGeometry args={[doorWidth, doorHeight, 0.05]} />
+        <Material isPhantom={isPhantom} color={color} roughness={0.3} metalness={0.1} />
+      </mesh>
+
+      <mesh position={[0, doorHeight + 0.025, -0.03]}>
+        <boxGeometry args={[doorWidth + frameThickness, 0.05, 0.06]} />
+        <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
+      </mesh>
+
+      <mesh position={[-doorWidth / 2 - frameThickness / 2, doorHeight / 2, -0.03]}>
+        <boxGeometry args={[frameThickness, doorHeight, 0.06]} />
+        <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
+      </mesh>
+
+      <mesh position={[doorWidth / 2 + frameThickness / 2, doorHeight / 2, -0.03]}>
+        <boxGeometry args={[frameThickness, doorHeight, 0.06]} />
+        <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
+      </mesh>
+
+      <mesh position={[doorWidth / 4, handleHeight, 0.035]}>
+        <boxGeometry args={[handleWidth, handleThickness, handleDepth]} />
+        <Material isPhantom={isPhantom} color="#FFD700" metalness={1} roughness={0.15} />
+      </mesh>
+
+      <mesh position={[doorWidth / 4, handleHeight, -0.035]}>
+        <boxGeometry args={[handleWidth, handleThickness, handleDepth]} />
+        <Material isPhantom={isPhantom} color="#FFD700" metalness={1} roughness={0.15} />
+      </mesh>
+
+      {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    </group>
+  );
+});
+
+
+const Window = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
     const windowWidth = 0.9;
-    const frameThickness = 0.05;
     return (
         <group rotation={[0, rotation, 0]}>
             <mesh position={[0, WALL_HEIGHT / 2, 0]}>
                 <boxGeometry args={[windowWidth, WALL_HEIGHT, 0.01]} />
-                <Material isPhantom={isPhantom} color={color} transparent opacity={0.5} roughness={0.1} metalness={0.2} />
+                <Material
+                    isPhantom={isPhantom}
+                    color={color}
+                    transparent
+                    opacity={0.5}
+                    roughness={0.1}
+                    metalness={0.2}
+                />
             </mesh>
-            <mesh position={[0, WALL_HEIGHT - frameThickness / 2, 0]}>
-                <boxGeometry args={[windowWidth + frameThickness, frameThickness, frameThickness]} />
-                <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
-            </mesh>
-            <mesh position={[0, frameThickness / 2, 0]}>
-                <boxGeometry args={[windowWidth + frameThickness, frameThickness, frameThickness]} />
-                <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
-            </mesh>
-            {!(rotation === 0 && neighborLeft) && !(rotation === Math.PI && neighborRight) && !(rotation === Math.PI / 2 && neighborFront) && !(rotation === 3 * Math.PI / 2 && neighborBack) && (
-                <mesh position={[-(windowWidth / 2 + frameThickness / 2), WALL_HEIGHT / 2, 0]}>
-                    <boxGeometry args={[frameThickness, WALL_HEIGHT, frameThickness]} />
-                    <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
-                </mesh>
-            )}
-            {!(rotation === 0 && neighborRight) && !(rotation === Math.PI && neighborLeft) && !(rotation === Math.PI / 2 && neighborBack) && !(rotation === 3 * Math.PI / 2 && neighborFront) && (
-                <mesh position={[(windowWidth / 2 + frameThickness / 2), WALL_HEIGHT / 2, 0]}>
-                    <boxGeometry args={[frameThickness, WALL_HEIGHT, frameThickness]} />
-                    <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
-                </mesh>
-            )}
             {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
         </group>
     );
 });
 
+
 const TV = React.memo(({ color, rotation, isHighlighted, isPhantom, isOn = true }) => (
-    <group rotation={[0, rotation, 0]}>
-        <mesh position={[0, 0.65, 0]}>
-            <boxGeometry args={[1.2, 0.7, 0.04]} />
-            <Material isPhantom={isPhantom} color="#1a1a1a" />
-        </mesh>
-        <mesh position={[0, 0.65, 0.021]}>
-            <planeGeometry args={[1.18, 0.68]} />
-            <meshStandardMaterial
-                color={isOn ? "#E1E6F0" : "#050505"}
-                emissive={isOn ? "#E1E6F0" : "#000000"}
-                emissiveIntensity={isOn ? 0.7 : 0}
-            />
-        </mesh>
-        <mesh position={[0, 0.3, 0]}>
-            <boxGeometry args={[0.5, 0.04, 0.25]} />
-            <Material isPhantom={isPhantom} color={color} metalness={0.3} roughness={0.5} />
-        </mesh>
-        <mesh position={[0, 0.15, 0]}>
-            <cylinderGeometry args={[0.02, 0.03, 0.3, 16]} />
-            <Material isPhantom={isPhantom} color={color} metalness={0.3} roughness={0.5} />
-        </mesh>
-        {!isPhantom && isOn && <pointLight intensity={2} distance={4} color={"#E1E6F0"} position={[0, 0.65, 0.5]} />}
-        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
-    </group>
+  <group rotation={[0, rotation, 0]}>
+    <mesh position={[0, 0.65, 0]}>
+      <boxGeometry args={[1.2, 0.7, 0.04]} />
+      <Material isPhantom={isPhantom} color="#1a1a1a" />
+    </mesh>
+    <mesh position={[0, 0.65, 0.021]}>
+      <planeGeometry args={[1.18, 0.68]} />
+      <meshStandardMaterial
+        color={isOn ? "#E1E6F0" : "#050505"}
+        emissive={isOn ? "#E1E6F0" : "#000000"}
+        emissiveIntensity={isOn ? 0.7 : 0}
+      />
+    </mesh>
+    <mesh position={[0, 0.25, -0.05]}>
+      <boxGeometry args={[0.08, 0.35, 0.08]} />
+      <Material isPhantom={isPhantom} color={color} metalness={0.4} roughness={0.5} />
+    </mesh>
+    <mesh position={[0, 0.05, -0.05]}>
+      <boxGeometry args={[0.6, 0.05, 0.3]} />
+      <Material isPhantom={isPhantom} color={color} metalness={0.4} roughness={0.6} />
+    </mesh>
+    {!isPhantom && isOn && (
+      <pointLight intensity={2} distance={4} color={"#E1E6F0"} position={[0, 0.65, 0.5]} />
+    )}
+    {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+  </group>
 ));
+
 
 const Console = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
     <group rotation={[0, rotation, 0]}>
@@ -1224,43 +1231,61 @@ const Console = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
 ));
 
 const ComputerSetup = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
-    <group rotation={[0, rotation, 0]}>
-        <mesh position={[0, 0.4, 0]}>
-            <boxGeometry args={[1.6, 0.05, 0.7]} />
-            <Material isPhantom={isPhantom} color={color} />
-        </mesh>
-        {[[-0.75, 0.35], [0.75, 0.35], [-0.75, -0.35], [0.75, -0.35]].map(([x, z], i) => (
-            <mesh key={i} position={[x, 0.2, z]}>
-                <boxGeometry args={[0.05, 0.4, 0.05]} />
-                <Material isPhantom={isPhantom} color="#2C3A59" />
-            </mesh>
-        ))}
-        <mesh position={[0, 0.8, -0.25]}>
-            <boxGeometry args={[0.7, 0.4, 0.05]} />
-            <Material isPhantom={isPhantom} color="#2C3A59" />
-        </mesh>
-        <mesh position={[0, 0.78, -0.24]}>
-            <boxGeometry args={[0.65, 0.35, 0.01]} />
-            <Material isPhantom={isPhantom} color="#111111" />
-        </mesh>
-        <mesh position={[0, 0.6, -0.25]}>
-            <cylinderGeometry args={[0.03, 0.03, 0.2, 16]} />
-            <Material isPhantom={isPhantom} color="#4B5563" />
-        </mesh>
-        <mesh position={[-0.55, 0.6, 0.25]}>
-            <boxGeometry args={[0.25, 0.9, 0.45]} />
-            <Material isPhantom={isPhantom} color="#2C3A59" />
-        </mesh>
-        <mesh position={[0.2, 0.43, 0.15]}>
-            <boxGeometry args={[0.5, 0.02, 0.15]} />
-            <Material isPhantom={isPhantom} color="#4B5563" />
-        </mesh>
-        <mesh position={[0.6, 0.43, 0.2]}>
-            <boxGeometry args={[0.1, 0.02, 0.07]} />
-            <Material isPhantom={isPhantom} color="#111111" />
-        </mesh>
-        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+  <group rotation={[0, rotation, 0]}>
+    {/* Столешница */}
+    <mesh position={[0, 0.4, 0]}>
+      <boxGeometry args={[1.6, 0.05, 0.7]} />
+      <Material isPhantom={isPhantom} color={color} metalness={0.2} roughness={0.6} />
+    </mesh>
+
+    {/* Ножки стола */}
+    {[[-0.75, 0.35], [0.75, 0.35], [-0.75, -0.35], [0.75, -0.35]].map(([x, z], i) => (
+      <mesh key={i} position={[x, 0.2, z]}>
+        <cylinderGeometry args={[0.03, 0.03, 0.4, 12]} />
+        <Material isPhantom={isPhantom} color="#2C3A59" metalness={0.3} roughness={0.5} />
+      </mesh>
+    ))}
+
+    {/* Монитор на кронштейне */}
+    <group position={[0, 0.85, -0.2]}>
+      <mesh>
+        <boxGeometry args={[0.7, 0.4, 0.05]} />
+        <Material isPhantom={isPhantom} color="#2C3A59" metalness={0.4} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0, 0.025]}>
+        <boxGeometry args={[0.65, 0.35, 0.01]} />
+        <Material isPhantom={isPhantom} color="#111111" metalness={0.5} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, -0.25, 0]}>
+        <cylinderGeometry args={[0.02, 0.02, 0.3, 12]} />
+        <Material isPhantom={isPhantom} color="#4B5563" metalness={0.6} roughness={0.3} />
+      </mesh>
     </group>
+
+    {/* Компактный системник на столе слева */}
+    <mesh position={[-0.55, 0.55, 0]}>
+      <boxGeometry args={[0.25, 0.45, 0.35]} />
+      <Material isPhantom={isPhantom} color="#2C3A59" metalness={0.3} roughness={0.5} />
+    </mesh>
+    <mesh position={[-0.55, 0.55, 0]}>
+      <boxGeometry args={[0.23, 0.42, 0.32]} />
+      <Material isPhantom={isPhantom} color="#111111" metalness={0.5} roughness={0.2} />
+    </mesh>
+
+    {/* Клавиатура */}
+    <mesh position={[0.2, 0.43, 0.15]}>
+      <boxGeometry args={[0.5, 0.02, 0.15]} />
+      <Material isPhantom={isPhantom} color="#4B5563" metalness={0.2} roughness={0.6} />
+    </mesh>
+
+    {/* Мышь */}
+    <mesh position={[0.6, 0.43, 0.2]}>
+      <boxGeometry args={[0.1, 0.02, 0.07]} />
+      <Material isPhantom={isPhantom} color="#111111" metalness={0.5} roughness={0.3} />
+    </mesh>
+
+    {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+  </group>
 ));
 
 const CeilingLamp = React.memo(({ color, rotation, isHighlighted, isPhantom, isOn = true }) => (
@@ -1383,31 +1408,44 @@ const Rug = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
     </group>
 ));
 
-const Mirror = React.memo(({ color, rotation, isHighlighted, isPhantom, graphicsSettings }) => (
+const Mirror = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
+  const mirrorRef = useRef();
+  const { scene, gl } = useThree();
+  const renderTarget = useMemo(() => new THREE.WebGLRenderTarget(512, 512), []);
+  const renderedRef = useRef(false);
+
+  useFrame(() => {
+    if (!renderedRef.current) {
+      const currentBackground = scene.background;
+      scene.background = null;
+      gl.setRenderTarget(renderTarget);
+      gl.render(scene, mirrorRef.current);
+      gl.setRenderTarget(null);
+      scene.background = currentBackground;
+      renderedRef.current = true;
+    }
+  });
+
+  return (
     <group rotation={[0, rotation, 0]}>
-        <mesh>
-            <boxGeometry args={[0.6, 1.2, 0.05]} />
-            <Material isPhantom={isPhantom} color={color} />
-        </mesh>
-        {!isPhantom && graphicsSettings.reflections && (
-            <mesh position={[0, 0, 0.026]}>
-                <planeGeometry args={[0.55, 1.15]} />
-                <MeshReflectorMaterial
-                    resolution={512}
-                    mirror={0.9}
-                    color="#a0a0a0"
-                />
-            </mesh>
-        )}
-        {!isPhantom && !graphicsSettings.reflections && (
-            <mesh position={[0, 0, 0.026]}>
-                <planeGeometry args={[0.55, 1.15]} />
-                <meshStandardMaterial color="#a0a0a0" metalness={0.5} roughness={0.5} />
-            </mesh>
-        )}
-        {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+      <mesh>
+        <boxGeometry args={[0.6, 1.6, 0.05]} />
+        <Material isPhantom={isPhantom} color={color} />
+      </mesh>
+
+      <mesh position={[0, 0, 0.026]} ref={mirrorRef}>
+        <planeGeometry args={[0.55, 1.55]} />
+        <meshStandardMaterial
+          map={renderTarget.texture}
+          metalness={1}
+          roughness={0.1}
+        />
+      </mesh>
+
+      {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
     </group>
-));
+  );
+});
 
 const BarStool = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
     <group rotation={[0, rotation, 0]}>
