@@ -267,7 +267,18 @@ const styles = {
     tutorialButtonHover: {
         backgroundColor: '#0056b3',
         transform: 'translateY(-2px)',
-    }
+    },
+    searchInput: {
+        width: '100%',
+        padding: '12px',
+        backgroundColor: 'var(--primary-dark)',
+        border: '1px solid var(--primary-darker)',
+        borderRadius: '8px',
+        color: 'var(--text-color-light)',
+        fontSize: '1em',
+        marginBottom: '10px',
+        boxSizing: 'border-box',
+    },
 };
 
 const HoverButton = ({ children, style, hoverStyle, onClick, disabled }) => {
@@ -377,6 +388,45 @@ const FURNITURE_CATEGORIES = {
         { type: 'diningTable', label: 'Обідній стіл', dimensions: { width: 1.8, depth: 0.9, height: 0.75 } },
         { type: 'diningChair', label: 'Обідній стілець', dimensions: { width: 0.5, depth: 0.5, height: 0.9 } },
     ]
+};
+
+const useHistory = (initialState) => {
+    const [history, setHistory] = useState([initialState]);
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    const state = useMemo(() => history[currentIndex], [history, currentIndex]);
+    const canUndo = currentIndex > 0;
+    const canRedo = currentIndex < history.length - 1;
+
+    const setState = useCallback((action) => {
+        const newState = typeof action === 'function' ? action(history[currentIndex]) : action;
+        if (JSON.stringify(newState) === JSON.stringify(history[currentIndex])) {
+            return;
+        }
+        const newHistory = history.slice(0, currentIndex + 1);
+        newHistory.push(newState);
+        setHistory(newHistory);
+        setCurrentIndex(newHistory.length - 1);
+    }, [currentIndex, history]);
+
+    const undo = useCallback(() => {
+        if (canUndo) {
+            setCurrentIndex(currentIndex - 1);
+        }
+    }, [canUndo, currentIndex]);
+
+    const redo = useCallback(() => {
+        if (canRedo) {
+            setCurrentIndex(currentIndex + 1);
+        }
+    }, [canRedo, currentIndex]);
+
+    const resetHistory = useCallback((newInitialState) => {
+        setHistory([newInitialState]);
+        setCurrentIndex(0);
+    }, []);
+
+    return { state, setState, undo, redo, canUndo, canRedo, resetHistory };
 };
 
 const isWebGLSupported = () => { try { const canvas = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))); } catch (e) { return false; } };
@@ -1649,13 +1699,14 @@ const Tutorial = ({ show, onClose }) => {
     const steps = useMemo(() => [
         { title: 'Ласкаво просимо до RoomCraft редактор!', text: 'Давайте швидко освоїмо основи. Натисніть "Далі", щоб почати.' },
         { title: 'Інструменти та Кольори', text: `У лівій панелі ви знайдете інструменти (🧱, ⬜) та палітру кольорів. Виберіть потрібний інструмент і колір, щоб почати.` },
-        { title: 'Створення Підлоги та Стін', text: `Виберіть інструмент "⬜ Підлога" або "🧱 Стіна". Клацніть **ЛІВОЮ** кнопкою миші на сітці та, не відпускаючи, ведіть курсор, щоб розмістити об'єкти.` },
+        { title: 'Створення Підлоги та Стін', text: `Виберіть інструмент "⬜ Підлога" або "🧱 Стіна". Клацніть **ЛІВОЮ** кнопкою миші на сітці та, не відпускаючи, ведіть курсор, щоб розмістити об\'єкти.` },
         { title: 'Розміщення Меблів (Перетягування)', text: 'Клацніть **ЛІВОЮ** кнопкою миші на предметі в інвентарі та, не відпускаючи, перетягніть його на потрібну плитку підлоги. Відпустіть кнопку, щоб розмістити.' },
-        { title: 'Дії з об\'єктами (Правий Клік)', text: 'Ви можете **пофарбувати**, **підняти/опустити**, видалити, повернути або притулити до стіни будь-який об\'єкт, клацнувши по ньому **ПРАВОЮ** кнопкою миші та обравши дію в меню.' },
-        { title: 'Обертання Об\'єктів (Клавіша)', text: 'Щоб **обернути** об\'єкт (фантомний під час перетягування або вже розміщений), наведіть на нього курсор і натисніть **"R"** на клавіатурі.' },
-        { title: 'Прив\'язка до Стіни (Клавіша)', text: 'Щоб **прив\'язати** меблі до краю блоку (до стіни), наведіть на об\'єкт і натисніть **"T"**. Об\'єкт переміститься до найближчої стіни замість центру блоку.' },
-        { title: 'Зберегти Проект', text: 'Використовуйте кнопку "Зберегти" у лівій панелі, щоб зберегти поточний стан вашої кімнати.' },
-        { title: 'Керування Камерою (Клавіатура)', text: 'Використовуйте клавіші **WASD** для переміщення вперед/назад/вбік. \nВикористовуйте **E** для руху вгору та **Q** для руху вниз.\nВикористовуйте **стрілки вліво/вправо** для повороту камери.\nВикористовуйте **стрілки вгору/вниз** для нахилу камери вгору/вниз.' },
+        { title: 'Дії з об\\\'єктами (Правий Клік)', text: 'Ви можете **пофарбувати**, **підняти/опустити**, видалити, повернути або притулити до стіни будь-який об\\\'єкт, клацнувши по ньому **ПРАВОЮ** кнопкою миші та обравши дію в меню.' },
+        { title: 'Обертання Об\\\'єктів (Клавіша)', text: 'Щоб **обернути** об\\\'єкт (фантомний під час перетягування або вже розміщений), наведіть на нього курсор і натисніть **"R"** на клавіатурі.' },
+        { title: 'Прив\\\'язка до Стіни (Клавіша)', text: 'Щоб **прив\\\'язати** меблі до краю блоку (до стіни), наведіть на об\\\'єкт і натисніть **"T"**. Об\\\'єкт переміститься до найближчої стіни замість центру блоку.' },
+        { title: 'Історія Змін (Undo/Redo)', text: 'Використовуйте кнопки **"Назад"** та **"Вперед"** у лівій панелі або комбінації клавіш **Ctrl+Z** / **Ctrl+Shift+Z** для скасування та повторення дій.' },
+        { title: 'Автоматичне збереження', text: 'Ваш прогрес зберігається автоматично через кілька секунд після внесення змін. Слідкуйте за індикатором у правому нижньому кутку.' },
+        { title: 'Керування Камерою (Клавіатура)', text: 'Використовуйте клавіші **WASD** для переміщення вперед/назад/вбік. \\nВикористовуйте **E** для руху вгору та **Q** для руху вниз.\\nВикористовуйте **стрілки вліво/вправо** для повороту камери.\\nВикористовуйте **стрілки вгору/вниз** для нахилу камери вгору/вниз.' },
         { title: 'Готово!', text: 'Ви освоїли основи! Насолоджуйтесь створенням свого дизайну!' }
     ], []);
     if (!show) return null;
@@ -1858,6 +1909,17 @@ const FpsStabilizer = ({ onStable, stableFramesRequired = 30, fpsThreshold = 45 
     return null;
 };
 
+const SmallSpinner = () => (
+    <div style={{
+        border: '2px solid rgba(255, 255, 255, 0.4)',
+        borderRadius: '50%',
+        borderTop: '2px solid var(--accent)',
+        width: '16px',
+        height: '16px',
+        animation: 'spin 1s linear infinite',
+    }} />
+);
+
 export default function Edit() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -1865,12 +1927,11 @@ export default function Edit() {
     useEffect(() => { document.title = "RoomCraft | Редактор" });
 
     const [gridSize, setGridSize] = useState(INITIAL_GRID_SIZE);
-    const [walls, setWalls] = useState({});
-    const [furniture, setFurniture] = useState({});
-    const [floorTiles, setFloorTiles] = useState({});
+    const { state, setState, undo, redo, canUndo, canRedo, resetHistory } = useHistory({ walls: {}, furniture: {}, floorTiles: {}, userColors: [] });
+    const { walls, furniture, floorTiles, userColors } = state;
+
     const [selectedTool, setSelectedTool] = useState(TOOL_TYPES.floor);
     const [selectedColor, setSelectedColor] = useState(BASE_COLORS[0]);
-    const [userColors, setUserColors] = useState([]);
     const [customColor, setCustomColor] = useState('#8B4513');
     const [roomName, setRoomName] = useState('');
     const [hoveredCell, setHoveredCell] = useState(null);
@@ -1887,7 +1948,6 @@ export default function Edit() {
     const [showModal, setShowModal] = useState(false);
     const [modalContent, setModalContent] = useState({ title: '', message: '', onConfirm: null, isConfirm: false });
     const [isMobile, setIsMobile] = useState(false);
-    const [isDirty, setIsDirty] = useState(false);
     const mobileMovementInput = useRef({ forward: 0, backward: 0, left: 0, right: 0 });
     const cameraRotationInput = useRef({ yaw: 0, pitch: 0 });
     const cameraVerticalInput = useRef(0);
@@ -1901,6 +1961,35 @@ export default function Edit() {
     const [showGraphicsSettings, setShowGraphicsSettings] = useState(false);
     const [isGpuReady, setIsGpuReady] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+    const updateState = useCallback((updater) => {
+        setState(updater);
+    }, [setState]);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
+    const filteredFurnitureCategories = useMemo(() => {
+        if (!debouncedSearchQuery) return FURNITURE_CATEGORIES;
+        const lowercasedQuery = debouncedSearchQuery.toLowerCase();
+        const filtered = {};
+        for (const category in FURNITURE_CATEGORIES) {
+            const items = FURNITURE_CATEGORIES[category].filter(item =>
+                item.label.toLowerCase().includes(lowercasedQuery)
+            );
+            if (items.length > 0) {
+                filtered[category] = items;
+            }
+        }
+        return filtered;
+    }, [debouncedSearchQuery]);
 
     const handleGpuDetect = useCallback((gpu) => {
         if (isGpuReady) return;
@@ -1966,40 +2055,10 @@ export default function Edit() {
         handleGraphicsSettingsChange(newSettings);
     };
 
-    const updateWalls = useCallback((updater) => {
-        setWalls(updater);
-        setIsDirty(true);
-    }, []);
-    const updateFurniture = useCallback((updater) => {
-        setFurniture(updater);
-        setIsDirty(true);
-    }, []);
-    const updateFloorTiles = useCallback((updater) => {
-        setFloorTiles(updater);
-        setIsDirty(true);
-    }, []);
-    const updateUserColors = useCallback((updater) => {
-        setUserColors(updater);
-        setIsDirty(true);
-    }, []);
-
     useEffect(() => {
         if (!isWebGLSupported()) { setModalContent({ title: 'Браузер/пристрій не підтримується', message: 'Ваш браузер або пристрій не підтримує WebGL, необхідний для роботи цього додатка. Будь ласка, спробуйте інший браузер або пристрій.', onConfirm: () => navigate('/'), isConfirm: false }); setShowModal(true); }
         setIsMobile(isMobileDevice());
     }, [navigate]);
-
-    useEffect(() => {
-        const handleBeforeUnload = (e) => {
-            if (isDirty) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, [isDirty]);
 
     useEffect(() => {
         if (contextMenu.visible && contextMenu.target) {
@@ -2026,11 +2085,22 @@ export default function Edit() {
 
 
     const resetAllState = useCallback(() => {
-        updateWalls({}); updateFurniture({}); updateFloorTiles({}); setGridSize(INITIAL_GRID_SIZE); setHoveredCell(null); setIsDragging(false); setDraggedType(null); setDraggedSubType(null); setPhantomObjectPosition(null); setPhantomObjectRotation(0); updateUserColors([]); setSelectedColor(BASE_COLORS[0]); setDraggedItemData(null);
+        resetHistory({ walls: {}, furniture: {}, floorTiles: {}, userColors: [] });
+        setGridSize(INITIAL_GRID_SIZE);
+        setHoveredCell(null);
+        setIsDragging(false);
+        setDraggedType(null);
+        setDraggedSubType(null);
+        setPhantomObjectPosition(null);
+        setPhantomObjectRotation(0);
+        setSelectedColor(BASE_COLORS[0]);
+        setDraggedItemData(null);
         targetCameraPosition.current.set(...INITIAL_CAMERA_POSITION);
-        const tempCamera = new THREE.Camera(); tempCamera.position.set(...INITIAL_CAMERA_POSITION); tempCamera.lookAt(INITIAL_LOOK_AT_TARGET); targetCameraQuaternion.current.copy(tempCamera.quaternion);
-        setIsDirty(false);
-    }, [updateWalls, updateFurniture, updateFloorTiles, updateUserColors]);
+        const tempCamera = new THREE.Camera();
+        tempCamera.position.set(...INITIAL_CAMERA_POSITION);
+        tempCamera.lookAt(INITIAL_LOOK_AT_TARGET);
+        targetCameraQuaternion.current.copy(tempCamera.quaternion);
+    }, [resetHistory]);
 
     const getKey = useCallback((x, z) => `${x},${z}`, []);
     const checkGridExpansion = useCallback((x, z) => { const threshold = gridSize * 0.8; if (Math.abs(x) > threshold || Math.abs(z) > threshold) { setGridSize((prev) => prev * 2); } }, [gridSize]);
@@ -2062,92 +2132,119 @@ export default function Edit() {
 
     const paintObject = useCallback((targetKey, color) => {
         if (!targetKey) return;
-        if (furniture[targetKey]) {
-            updateFurniture(prev => ({ ...prev, [targetKey]: { ...prev[targetKey], color: color } }));
-        } else if (walls[targetKey]) {
-            updateWalls(prev => ({ ...prev, [targetKey]: { ...prev[targetKey], color: color } }));
-        } else if (floorTiles[targetKey]) {
-            updateFloorTiles(prev => ({ ...prev, [targetKey]: color }));
-        }
-    }, [furniture, walls, floorTiles, updateFurniture, updateWalls, updateFloorTiles]);
+        updateState(prev => {
+            const newState = { ...prev };
+            if (newState.furniture[targetKey]) {
+                newState.furniture = { ...newState.furniture, [targetKey]: { ...newState.furniture[targetKey], color: color } };
+            } else if (newState.walls[targetKey]) {
+                newState.walls = { ...newState.walls, [targetKey]: { ...newState.walls[targetKey], color: color } };
+            } else if (newState.floorTiles[targetKey]) {
+                newState.floorTiles = { ...newState.floorTiles, [targetKey]: color };
+            }
+            return newState;
+        });
+    }, [updateState]);
 
     const rotateObject = useCallback((targetKey = null) => {
         const key = targetKey || (hoveredCell ? getKey(hoveredCell.x, hoveredCell.z) : null);
         if (!key) return;
 
-        const [x, z] = key.split(',').map(Number);
-
         if (isDragging && phantomObjectPosition && draggedType === TOOL_TYPES.furniture) {
             setPhantomObjectRotation((prev) => (prev + Math.PI / 2) % (Math.PI * 2));
-        } else if (furniture[key]) {
-            const currentFurniture = furniture[key];
-            const newRotation = ((currentFurniture.rotation || 0) + Math.PI / 2) % (Math.PI * 2);
-            const furnitureDimensions = Object.values(FURNITURE_CATEGORIES).flat().find(item => item.type === currentFurniture.type)?.dimensions;
-            let newOffsetX = 0, newOffsetZ = 0, isSnapped = false;
-            if (currentFurniture.isSnapped && furnitureDimensions) {
-                const snapResult = calculateWallSnapPosition(x, z, walls, floorTiles, getKey, { ...currentFurniture, rotation: newRotation, dimensions: furnitureDimensions });
-                if (snapResult.snapped) { newOffsetX = snapResult.offsetX; newOffsetZ = snapResult.offsetZ; isSnapped = true; }
-            }
-            updateFurniture((prev) => {
-                let updated = { ...prev, [key]: { ...prev[key], rotation: newRotation, offsetX: newOffsetX, offsetZ: newOffsetZ, isSnapped: isSnapped } };
-                if (currentFurniture.type === 'window') {
-                    updated = updateNeighboringWindows(x, z, updated);
-                    [getKey(x - 1, z), getKey(x + 1, z), getKey(x, z - 1), getKey(x, z + 1)].forEach(nKey => {
-                        if (updated[nKey]?.type === 'window') updated = updateNeighboringWindows(...nKey.split(',').map(Number), updated);
-                    });
+        } else {
+            updateState(prev => {
+                const newState = { ...prev };
+                const [x, z] = key.split(',').map(Number);
+
+                if (newState.furniture[key]) {
+                    const currentFurniture = newState.furniture[key];
+                    const newRotation = ((currentFurniture.rotation || 0) + Math.PI / 2) % (Math.PI * 2);
+                    const furnitureDimensions = allFurnitureItems.find(item => item.type === currentFurniture.type)?.dimensions;
+                    let newOffsetX = 0, newOffsetZ = 0, isSnapped = false;
+                    if (currentFurniture.isSnapped && furnitureDimensions) {
+                        const snapResult = calculateWallSnapPosition(x, z, newState.walls, newState.floorTiles, getKey, { ...currentFurniture, rotation: newRotation, dimensions: furnitureDimensions });
+                        if (snapResult.snapped) { newOffsetX = snapResult.offsetX; newOffsetZ = snapResult.offsetZ; isSnapped = true; }
+                    }
+                    let updatedFurniture = { ...newState.furniture, [key]: { ...currentFurniture, rotation: newRotation, offsetX: newOffsetX, offsetZ: newOffsetZ, isSnapped: isSnapped } };
+                    if (currentFurniture.type === 'window') {
+                        updatedFurniture = updateNeighboringWindows(x, z, updatedFurniture);
+                        [getKey(x - 1, z), getKey(x + 1, z), getKey(x, z - 1), getKey(x, z + 1)].forEach(nKey => {
+                            if (updatedFurniture[nKey]?.type === 'window') updatedFurniture = updateNeighboringWindows(...nKey.split(',').map(Number), updatedFurniture);
+                        });
+                    }
+                    newState.furniture = updatedFurniture;
+
+                    if (['door', 'window'].includes(currentFurniture.type) && newState.walls[key]?.hasOpening) {
+                        newState.walls = { ...newState.walls, [key]: { ...newState.walls[key], rotation: newRotation } };
+                    }
+                } else if (newState.walls[key] && !newState.walls[key].hasOpening) {
+                    newState.walls = { ...newState.walls, [key]: { ...newState.walls[key], rotation: ((newState.walls[key].rotation || 0) + Math.PI / 2) % (Math.PI * 2) } };
                 }
-                return updated;
+                return newState;
             });
-            if (['door', 'window'].includes(currentFurniture.type)) {
-                updateWalls((prev) => prev[key]?.hasOpening ? { ...prev, [key]: { ...prev[key], rotation: newRotation } } : prev);
-            }
-        } else if (walls[key] && !walls[key].hasOpening) {
-            updateWalls((prev) => ({ ...prev, [key]: { ...prev[key], rotation: ((prev[key].rotation || 0) + Math.PI / 2) % (Math.PI * 2) } }));
         }
-    }, [furniture, walls, getKey, hoveredCell, isDragging, phantomObjectPosition, draggedType, floorTiles, updateNeighboringWindows, updateFurniture, updateWalls]);
+    }, [hoveredCell, isDragging, phantomObjectPosition, draggedType, getKey, updateState, allFurnitureItems, updateNeighboringWindows]);
 
     const snapToWall = useCallback((targetKey = null) => {
         const key = targetKey || (hoveredCell ? getKey(hoveredCell.x, hoveredCell.z) : null);
         if (!key) return;
 
-        const [x, z] = key.split(',').map(Number);
-        const furnitureItem = furniture[key];
-        if (furnitureItem && !['door', 'window'].includes(furnitureItem.type)) {
-            const furnitureDimensions = Object.values(FURNITURE_CATEGORIES).flat().find(item => item.type === furnitureItem.type)?.dimensions;
-            if (furnitureDimensions) {
-                const snapResult = calculateWallSnapPosition(x, z, walls, floorTiles, getKey, { ...furnitureItem, dimensions: furnitureDimensions });
-                if (snapResult.snapped && !furnitureItem.isSnapped) {
-                    updateFurniture((prev) => ({ ...prev, [key]: { ...prev[key], offsetX: snapResult.offsetX, offsetZ: snapResult.offsetZ, isSnapped: true } }));
-                } else if (furnitureItem.isSnapped) {
-                    updateFurniture((prev) => ({ ...prev, [key]: { ...prev[key], offsetX: 0, offsetZ: 0, isSnapped: false } }));
+        updateState(prev => {
+            const furnitureItem = prev.furniture[key];
+            if (!furnitureItem || ['door', 'window'].includes(furnitureItem.type)) return prev;
+
+            const [x, z] = key.split(',').map(Number);
+            const furnitureDimensions = allFurnitureItems.find(item => item.type === furnitureItem.type)?.dimensions;
+            if (!furnitureDimensions) return prev;
+
+            if (furnitureItem.isSnapped) {
+                const newFurniture = { ...prev.furniture, [key]: { ...furnitureItem, offsetX: 0, offsetZ: 0, isSnapped: false } };
+                return { ...prev, furniture: newFurniture };
+            } else {
+                const snapResult = calculateWallSnapPosition(x, z, prev.walls, prev.floorTiles, getKey, { ...furnitureItem, dimensions: furnitureDimensions });
+                if (snapResult.snapped) {
+                    const newFurniture = { ...prev.furniture, [key]: { ...furnitureItem, offsetX: snapResult.offsetX, offsetZ: snapResult.offsetZ, isSnapped: true } };
+                    return { ...prev, furniture: newFurniture };
                 }
             }
-        }
-    }, [hoveredCell, furniture, walls, floorTiles, getKey, updateFurniture]);
+            return prev;
+        });
+    }, [hoveredCell, getKey, updateState, allFurnitureItems]);
 
     const deleteObject = useCallback((targetKey) => {
-        const [x, z] = targetKey.split(',').map(Number);
-        if (furniture[targetKey]) {
-            const removedType = furniture[targetKey].type;
-            updateFurniture(prev => {
-                const copy = { ...prev };
-                delete copy[targetKey];
+        updateState(prev => {
+            const newState = { ...prev };
+            const [x, z] = targetKey.split(',').map(Number);
+
+            if (newState.furniture[targetKey]) {
+                const removedType = newState.furniture[targetKey].type;
+                const newFurniture = { ...newState.furniture };
+                delete newFurniture[targetKey];
                 if (removedType === 'window') {
                     [getKey(x - 1, z), getKey(x + 1, z), getKey(x, z - 1), getKey(x, z + 1)].forEach(nKey => {
-                        if (copy[nKey]?.type === 'window') Object.assign(copy, updateNeighboringWindows(...nKey.split(',').map(Number), copy));
+                        if (newFurniture[nKey]?.type === 'window') Object.assign(newFurniture, updateNeighboringWindows(...nKey.split(',').map(Number), newFurniture));
                     });
                 }
-                return copy;
-            });
-            if (['door', 'window'].includes(removedType)) {
-                updateWalls(prev => { const copy = { ...prev }; if (copy[targetKey]?.hasOpening) delete copy[targetKey]; return copy; });
+                newState.furniture = newFurniture;
+                if (['door', 'window'].includes(removedType)) {
+                    const newWalls = { ...newState.walls };
+                    if (newWalls[targetKey]?.hasOpening) {
+                        delete newWalls[targetKey];
+                        newState.walls = newWalls;
+                    }
+                }
+            } else if (newState.walls[targetKey]) {
+                const newWalls = { ...newState.walls };
+                delete newWalls[targetKey];
+                newState.walls = newWalls;
+            } else if (newState.floorTiles[targetKey]) {
+                const newFloorTiles = { ...newState.floorTiles };
+                delete newFloorTiles[targetKey];
+                newState.floorTiles = newFloorTiles;
             }
-        } else if (walls[targetKey]) {
-            updateWalls(prev => { const copy = { ...prev }; delete copy[targetKey]; return copy; });
-        } else if (floorTiles[targetKey]) {
-            updateFloorTiles(prev => { const copy = { ...prev }; delete copy[targetKey]; return copy; });
-        }
-    }, [furniture, walls, floorTiles, getKey, updateNeighboringWindows, updateFurniture, updateWalls, updateFloorTiles]);
+            return newState;
+        });
+    }, [getKey, updateState, updateNeighboringWindows]);
 
     const handleContextMenu = useCallback((e, x, z) => {
         e.nativeEvent.preventDefault();
@@ -2155,7 +2252,7 @@ export default function Edit() {
         const key = getKey(x, z);
         let target = null;
         if (furniture[key]) {
-            const itemInfo = Object.values(FURNITURE_CATEGORIES).flat().find(item => item.type === furniture[key].type);
+            const itemInfo = allFurnitureItems.find(item => item.type === furniture[key].type);
             target = { type: 'furniture', name: itemInfo?.label || 'Меблі', key, item: furniture[key] };
         } else if (walls[key]) {
             target = { type: 'wall', name: 'Стіна', key, item: walls[key] };
@@ -2166,16 +2263,14 @@ export default function Edit() {
             setContextMenu({ visible: true, x: e.clientX, y: e.clientY, target });
             setContextMenuTargetKey(key);
         }
-    }, [furniture, walls, floorTiles, getKey]);
+    }, [furniture, walls, floorTiles, getKey, allFurnitureItems]);
 
     const startMoveObject = useCallback((key) => {
         if (furniture[key]) {
             const itemToDrag = furniture[key];
             const [x, z] = key.split(',').map(Number);
 
-            if (itemToDrag.type === 'door' || itemToDrag.type === 'window') {
-                return;
-            }
+            if (itemToDrag.type === 'door' || itemToDrag.type === 'window') return;
 
             setIsDragging(true);
             setDraggedType(TOOL_TYPES.furniture);
@@ -2184,13 +2279,13 @@ export default function Edit() {
             setPhantomObjectPosition({ x, z });
             setDraggedItemData({ ...itemToDrag, originalKey: key });
 
-            updateFurniture((prev) => {
-                const newFurniture = { ...prev };
+            updateState(prev => {
+                const newFurniture = { ...prev.furniture };
                 delete newFurniture[key];
-                return newFurniture;
+                return { ...prev, furniture: newFurniture };
             });
         }
-    }, [furniture, updateFurniture]);
+    }, [furniture, updateState]);
 
     const handleContextMenuAction = useCallback((action, key) => {
         const HEIGHT_INCREMENT = 0.1;
@@ -2200,27 +2295,22 @@ export default function Edit() {
             case 'snap': snapToWall(key); break;
             case 'move': startMoveObject(key); break;
             case 'raise':
-                updateFurniture(prev => {
-                    if (prev[key]) {
-                        const currentY = prev[key].y || 0;
-                        return { ...prev, [key]: { ...prev[key], y: currentY + HEIGHT_INCREMENT } };
-                    }
-                    return prev;
-                });
-                break;
             case 'lower':
-                updateFurniture(prev => {
-                    if (prev[key]) {
-                        const currentY = prev[key].y || 0;
-                        return { ...prev, [key]: { ...prev[key], y: Math.max(0, currentY - HEIGHT_INCREMENT) } };
+                updateState(prev => {
+                    if (prev.furniture[key]) {
+                        const currentY = prev.furniture[key].y || 0;
+                        const newY = action === 'raise' ? currentY + HEIGHT_INCREMENT : Math.max(0, currentY - HEIGHT_INCREMENT);
+                        const newFurniture = { ...prev.furniture, [key]: { ...prev.furniture[key], y: newY } };
+                        return { ...prev, furniture: newFurniture };
                     }
                     return prev;
                 });
                 break;
             case 'toggle':
-                updateFurniture(prev => {
-                    if (prev[key]) {
-                        return { ...prev, [key]: { ...prev[key], isOn: !prev[key].isOn } };
+                updateState(prev => {
+                    if (prev.furniture[key]) {
+                        const newFurniture = { ...prev.furniture, [key]: { ...prev.furniture[key], isOn: !prev.furniture[key].isOn } };
+                        return { ...prev, furniture: newFurniture };
                     }
                     return prev;
                 });
@@ -2229,7 +2319,7 @@ export default function Edit() {
             default: break;
         }
         setContextMenu(prev => ({ ...prev, visible: false }));
-    }, [deleteObject, rotateObject, snapToWall, startMoveObject, updateFurniture]);
+    }, [deleteObject, rotateObject, snapToWall, startMoveObject, updateState]);
 
     useEffect(() => {
         const closeMenu = () => {
@@ -2247,17 +2337,37 @@ export default function Edit() {
     }, [contextMenu.visible]);
 
     function CanvasContent({
-                               getKey, rotateObject, snapToWall, checkGridExpansion, selectedTool, selectedColor, furniture, walls, floorTiles, hoveredCell, setHoveredCell, setFloorTiles, setWalls, setFurniture, isDragging, draggedType, draggedSubType, phantomObjectPosition, setPhantomObjectPosition, phantomObjectRotation, setPhantomObjectRotation, setIsDragging, setDraggedType, setDraggedSubType, handleContextMenu, keyPressed, targetCameraPosition, targetCameraQuaternion, mobileMovementInput, cameraRotationInput, cameraVerticalInput, updateNeighboringWindows, draggedItemData, setDraggedItemData, contextMenuTargetKey, graphicsSettings
+                               getKey, rotateObject, snapToWall, checkGridExpansion, selectedTool, selectedColor, furniture, walls, floorTiles, hoveredCell, setHoveredCell, updateState, isDragging, draggedType, draggedSubType, phantomObjectPosition, setPhantomObjectPosition, phantomObjectRotation, setPhantomObjectRotation, setIsDragging, setDraggedType, setDraggedSubType, handleContextMenu, keyPressed, targetCameraPosition, targetCameraQuaternion, mobileMovementInput, cameraRotationInput, cameraVerticalInput, updateNeighboringWindows, draggedItemData, setDraggedItemData, contextMenuTargetKey, graphicsSettings
                            }) {
         const { gl, camera } = useThree();
         const PI_2 = Math.PI / 2;
         useEffect(() => { camera.position.copy(targetCameraPosition.current); camera.quaternion.copy(targetCameraQuaternion.current); }, [camera]);
+        
         useEffect(() => {
-            const handleKeyDown = (e) => { const key = e.key.toLowerCase(); keyPressed.current[key] = true; if (key === 'r') { rotateObject(); e.preventDefault(); } else if (key === 't') { snapToWall(); e.preventDefault(); } };
+            const handleKeyDown = (e) => {
+                const key = e.key.toLowerCase();
+                if (e.ctrlKey && key === 'z') {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        redo();
+                    } else {
+                        undo();
+                    }
+                    return;
+                }
+                keyPressed.current[key] = true;
+                if (key === 'r') { rotateObject(); e.preventDefault(); }
+                else if (key === 't') { snapToWall(); e.preventDefault(); }
+            };
             const handleKeyUp = (e) => { const key = e.key.toLowerCase(); keyPressed.current[key] = false; };
-            window.addEventListener('keydown', handleKeyDown); window.addEventListener('keyup', handleKeyUp);
-            return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
-        }, [rotateObject, snapToWall, keyPressed]);
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('keyup', handleKeyUp);
+            return () => {
+                window.removeEventListener('keydown', handleKeyDown);
+                window.removeEventListener('keyup', handleKeyUp);
+            };
+        }, [rotateObject, snapToWall, keyPressed, undo, redo]);
+
         useFrame((_, delta) => {
             const moveAmount = MOVEMENT_SPEED * delta * 60; const verticalMoveAmount = VERTICAL_MOVEMENT_SPEED * delta * 60; const rotateAmountYaw = ROTATION_SPEED_KEYBOARD_YAW * delta * 60; const rotateAmountPitch = ROTATION_SPEED_KEYBOARD_PITCH * delta * 60;
             let newCameraPosition = camera.position.clone(); const currentQuaternion = camera.quaternion;
@@ -2273,6 +2383,7 @@ export default function Edit() {
             currentEuler.z = 0; targetCameraQuaternion.current.setFromEuler(currentEuler); camera.quaternion.slerp(targetCameraQuaternion.current, LERP_FACTOR);
         });
         const getIntersectionPoint = useCallback((event) => { const raycaster = new Raycaster(); const mouse = new THREE.Vector2(); const rect = gl.domElement.getBoundingClientRect(); mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1; mouse.y = - ((event.clientY - rect.top) / rect.height) * 2 + 1; raycaster.setFromCamera(mouse, camera); const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -FLOOR_LEVEL); const intersectionPoint = new Vector3(); raycaster.ray.intersectPlane(plane, intersectionPoint); return intersectionPoint; }, [gl, camera]);
+        
         const handlePointerDown = useCallback((e, x, z) => {
             e.stopPropagation();
             const domEvent = e.nativeEvent || e; if (domEvent.button === 2 || isDragging) return;
@@ -2281,11 +2392,22 @@ export default function Edit() {
                 setIsDragging(true); setDraggedType(selectedTool); setDraggedSubType(null); setPhantomObjectRotation(0); setDraggedItemData(null);
                 return;
             } else if (furniture[clickedKey] && (furniture[clickedKey].type !== 'door' && furniture[clickedKey].type !== 'window')) {
-                const itemToDrag = furniture[clickedKey]; setIsDragging(true); setDraggedType(TOOL_TYPES.furniture); setDraggedSubType(itemToDrag.type); setPhantomObjectRotation(itemToDrag.rotation || 0); setPhantomObjectPosition({ x, z }); setDraggedItemData({ ...itemToDrag, originalKey: clickedKey });
-                setFurniture((prev) => { const newFurniture = { ...prev }; delete newFurniture[clickedKey]; return newFurniture; });
+                const itemToDrag = furniture[clickedKey];
+                setIsDragging(true);
+                setDraggedType(TOOL_TYPES.furniture);
+                setDraggedSubType(itemToDrag.type);
+                setPhantomObjectRotation(itemToDrag.rotation || 0);
+                setPhantomObjectPosition({ x, z });
+                setDraggedItemData({ ...itemToDrag, originalKey: clickedKey });
+                updateState(prev => {
+                    const newFurniture = { ...prev.furniture };
+                    delete newFurniture[clickedKey];
+                    return { ...prev, furniture: newFurniture };
+                });
                 return;
             }
-        }, [isDragging, selectedTool, setIsDragging, setDraggedType, setDraggedSubType, setPhantomObjectRotation, furniture, getKey, setFurniture, setDraggedItemData]);
+        }, [isDragging, selectedTool, furniture, getKey, updateState, setIsDragging, setDraggedType, setDraggedSubType, setPhantomObjectRotation, setDraggedItemData]);
+
         const handlePointerMove = useCallback((e) => {
             e.stopPropagation();
             const domEvent = e.nativeEvent || e; const intersectionPoint = getIntersectionPoint(domEvent);
@@ -2298,49 +2420,85 @@ export default function Edit() {
                 }
             } else { if (hoveredCell) setHoveredCell(null); if (isDragging && draggedType && phantomObjectPosition) setPhantomObjectPosition(null); }
         }, [isDragging, draggedType, hoveredCell, phantomObjectPosition, getIntersectionPoint]);
+        
         useEffect(() => {
             const handleGlobalPointerUp = (e) => {
                 if (e.button !== 0 || !isDragging || !draggedType) {
-                    if (isDragging) {
-                        if (draggedItemData) {
-                            const { originalKey, ...item } = draggedItemData;
-                            setFurniture(prev => ({ ...prev, [originalKey]: item }));
-                        }
-                        setIsDragging(false); setDraggedType(null); setDraggedSubType(null); setPhantomObjectPosition(null); setPhantomObjectRotation(0); setDraggedItemData(null);
+                    if (isDragging && draggedItemData) {
+                        const { originalKey, ...item } = draggedItemData;
+                        updateState(prev => ({ ...prev, furniture: { ...prev.furniture, [originalKey]: item } }));
                     }
+                    setIsDragging(false); setDraggedType(null); setDraggedSubType(null); setPhantomObjectPosition(null); setPhantomObjectRotation(0); setDraggedItemData(null);
                     return;
                 }
                 if (!phantomObjectPosition) {
                     if (draggedItemData) {
                         const { originalKey, ...item } = draggedItemData;
-                        setFurniture(prev => ({ ...prev, [originalKey]: item }));
+                        updateState(prev => ({ ...prev, furniture: { ...prev.furniture, [originalKey]: item } }));
                     }
                     setIsDragging(false); setDraggedType(null); setDraggedSubType(null); setPhantomObjectPosition(null); setPhantomObjectRotation(0); setDraggedItemData(null);
                     return;
                 };
 
-                const finalX = Math.round(phantomObjectPosition.x); const finalZ = Math.round(phantomObjectPosition.z); const key = getKey(finalX, finalZ);
-                const isPlacementValid = floorTiles[key] && (!furniture[key] || (furniture[key].type === 'door' || furniture[key].type === 'window'));
-                if (draggedType === TOOL_TYPES.floor) { setFloorTiles((prev) => ({ ...prev, [key]: selectedColor })); setWalls((prev) => { const copy = { ...prev }; delete copy[key]; return copy; }); setFurniture((prev) => { const copy = { ...prev }; if (!copy[key] || !['door', 'window'].includes(copy[key].type)) delete copy[key]; return copy; }); checkGridExpansion(finalX, finalZ); }
-                else if (draggedType === TOOL_TYPES.wall) { if (floorTiles[key] && (!furniture[key] || (furniture[key].type !== 'door' && furniture[key].type !== 'window'))) { setWalls((prev) => ({ ...prev, [key]: { color: selectedColor, hasOpening: false, rotation: phantomObjectRotation } })); checkGridExpansion(finalX, finalZ); } }
-                else if (draggedType === TOOL_TYPES.furniture) {
-                    if (isPlacementValid) {
-                        const phantomDimensions = Object.values(FURNITURE_CATEGORIES).flat().find(item => item.type === draggedSubType)?.dimensions;
-                        const newFurniture = { type: draggedSubType, color: draggedItemData ? draggedItemData.color : selectedColor, rotation: phantomObjectRotation, offsetX: 0, offsetZ: 0, y: draggedItemData?.y || 0, isSnapped: false, dimensions: phantomDimensions, neighborLeft: false, neighborRight: false, neighborFront: false, neighborBack: false, isOn: true };
-                        setFurniture((prev) => { let updated = { ...prev, [key]: newFurniture }; if (draggedSubType === 'window') { updated = updateNeighboringWindows(finalX, finalZ, updated); [getKey(finalX - 1, finalZ), getKey(finalX + 1, finalZ), getKey(finalX, finalZ - 1), getKey(finalX, finalZ + 1)].forEach(nKey => { if (updated[nKey]?.type === 'window') updated = updateNeighboringWindows(...nKey.split(',').map(Number), updated); }); } return updated; });
-                        if (['door', 'window'].includes(draggedSubType)) { setWalls((prev) => ({ ...prev, [key]: { color: selectedColor, hasOpening: true, rotation: phantomObjectRotation } })); }
-                        else { setWalls((prev) => { const copy = { ...prev }; if (copy[key] && !copy[key].hasOpening) delete copy[key]; return copy; }); }
+                updateState(prev => {
+                    const newState = { ...prev };
+                    const finalX = Math.round(phantomObjectPosition.x);
+                    const finalZ = Math.round(phantomObjectPosition.z);
+                    const key = getKey(finalX, finalZ);
+                    const isPlacementValid = newState.floorTiles[key] && (!newState.furniture[key] || ['door', 'window'].includes(newState.furniture[key]?.type));
+
+                    if (draggedType === TOOL_TYPES.floor) {
+                        newState.floorTiles = { ...newState.floorTiles, [key]: selectedColor };
+                        if (newState.walls[key]) {
+                            const newWalls = { ...newState.walls };
+                            delete newWalls[key];
+                            newState.walls = newWalls;
+                        }
+                        if (newState.furniture[key] && !['door', 'window'].includes(newState.furniture[key].type)) {
+                            const newFurniture = { ...newState.furniture };
+                            delete newFurniture[key];
+                            newState.furniture = newFurniture;
+                        }
                         checkGridExpansion(finalX, finalZ);
-                    } else if (draggedItemData) {
-                        const { originalKey, ...item } = draggedItemData;
-                        setFurniture(prev => ({ ...prev, [originalKey]: item }));
+                    } else if (draggedType === TOOL_TYPES.wall) {
+                        if (newState.floorTiles[key] && (!newState.furniture[key] || (newState.furniture[key].type !== 'door' && newState.furniture[key].type !== 'window'))) {
+                            newState.walls = { ...newState.walls, [key]: { color: selectedColor, hasOpening: false, rotation: phantomObjectRotation } };
+                            checkGridExpansion(finalX, finalZ);
+                        }
+                    } else if (draggedType === TOOL_TYPES.furniture) {
+                        if (isPlacementValid) {
+                            const phantomDimensions = allFurnitureItems.find(item => item.type === draggedSubType)?.dimensions;
+                            const newFurnitureItem = { type: draggedSubType, color: draggedItemData ? draggedItemData.color : selectedColor, rotation: phantomObjectRotation, offsetX: 0, offsetZ: 0, y: draggedItemData?.y || 0, isSnapped: false, dimensions: phantomDimensions, neighborLeft: false, neighborRight: false, neighborFront: false, neighborBack: false, isOn: true };
+                            let updatedFurniture = { ...newState.furniture, [key]: newFurnitureItem };
+                            if (draggedSubType === 'window') {
+                                updatedFurniture = updateNeighboringWindows(finalX, finalZ, updatedFurniture);
+                                [getKey(finalX - 1, finalZ), getKey(finalX + 1, finalZ), getKey(finalX, finalZ - 1), getKey(finalX, finalZ + 1)].forEach(nKey => {
+                                    if (updatedFurniture[nKey]?.type === 'window') updatedFurniture = updateNeighboringWindows(...nKey.split(',').map(Number), updatedFurniture);
+                                });
+                            }
+                            newState.furniture = updatedFurniture;
+
+                            if (['door', 'window'].includes(draggedSubType)) {
+                                newState.walls = { ...newState.walls, [key]: { color: selectedColor, hasOpening: true, rotation: phantomObjectRotation } };
+                            } else if (newState.walls[key] && !newState.walls[key].hasOpening) {
+                                const newWalls = { ...newState.walls };
+                                delete newWalls[key];
+                                newState.walls = newWalls;
+                            }
+                            checkGridExpansion(finalX, finalZ);
+                        } else if (draggedItemData) {
+                            const { originalKey, ...item } = draggedItemData;
+                            newState.furniture = { ...newState.furniture, [originalKey]: item };
+                        }
                     }
-                }
+                    return newState;
+                });
+
                 setIsDragging(false); setDraggedType(null); setDraggedSubType(null); setPhantomObjectPosition(null); setPhantomObjectRotation(0); setDraggedItemData(null);
             };
             const currentCanvas = gl.domElement; if (currentCanvas) currentCanvas.addEventListener('pointerup', handleGlobalPointerUp);
             return () => { if (currentCanvas) currentCanvas.removeEventListener('pointerup', handleGlobalPointerUp); };
-        }, [isDragging, draggedType, draggedSubType, phantomObjectPosition, getKey, floorTiles, furniture, walls, setFurniture, setWalls, setFloorTiles, selectedColor, phantomObjectRotation, setIsDragging, setDraggedType, setDraggedSubType, setPhantomObjectPosition, setPhantomObjectRotation, checkGridExpansion, gl, updateNeighboringWindows, draggedItemData]);
+        }, [isDragging, draggedType, draggedSubType, phantomObjectPosition, getKey, selectedColor, phantomObjectRotation, checkGridExpansion, gl, updateNeighboringWindows, draggedItemData, allFurnitureItems, updateState]);
 
         const renderComponent = useCallback((data, isPhantom = false, isPlacementValid = true, isHighlighted = false) => {
             const { type: itemType, color, rotation = 0, neighborLeft, neighborRight, neighborFront, neighborBack, isOn } = data;
@@ -2405,21 +2563,7 @@ export default function Edit() {
 
     const handleFurnitureDragStart = useCallback((type) => { setSelectedTool(TOOL_TYPES.furniture); setIsDragging(true); setDraggedType(TOOL_TYPES.furniture); setDraggedSubType(type); setPhantomObjectRotation(type === 'painting' ? Math.PI : 0); setDraggedItemData(null); }, []);
     const handleToolToggle = useCallback((toolLabel) => { if (selectedTool === toolLabel) setSelectedTool(null); else setSelectedTool(toolLabel); setIsDragging(false); setDraggedType(null); setDraggedSubType(null); setPhantomObjectPosition(null); setPhantomObjectRotation(0); setDraggedItemData(null); }, [selectedTool]);
-    const saveRoomState = useCallback(() => {
-        if (isNaN(roomId)) { setModalContent({ title: 'Помилка збереження', message: 'Недійсний ідентифікатор кімнати. Збереження неможливе.', onConfirm: () => setShowModal(false), isConfirm: false }); setShowModal(true); return; }
-        try {
-            const userJson = localStorage.getItem('user'); let currentUser = null;
-            if (userJson) { try { currentUser = JSON.parse(userJson); } catch (e) { currentUser = null; } }
-            if (!currentUser || !Array.isArray(currentUser.rooms)) { setModalContent({ title: 'Помилка збереження', message: 'Немає даних користувача для збереження кімнати. Увійдіть або зареєструйтесь.', onConfirm: () => setShowModal(false), isConfirm: false }); setShowModal(true); return; }
-            const roomIndex = currentUser.rooms.findIndex(room => room.id === roomId);
-            if (roomIndex !== -1) {
-                currentUser.rooms[roomIndex] = { ...currentUser.rooms[roomIndex], name: roomName, gridSize, walls, furniture, floorTiles, userColors, selectedColor, cameraPosition: targetCameraPosition.current.toArray(), cameraQuaternion: targetCameraQuaternion.current.toArray() };
-                localStorage.setItem('user', JSON.stringify(currentUser));
-                setIsDirty(false);
-                setModalContent({ title: 'Збережено', message: `Стан кімнати "${roomName}" успішно збережено!`, onConfirm: () => { setShowModal(false); navigate('/'); }, isConfirm: false }); setShowModal(true);
-            } else { setModalContent({ title: 'Помилка збереження', message: 'Кімнату з таким ID не знайдено для оновлення. Переконайтеся, що вона існує.', onConfirm: () => setShowModal(false), isConfirm: false }); setShowModal(true); }
-        } catch (error) { setModalContent({ title: 'Помилка збереження', message: 'Помилка під час збереження стану кімнати. Перевірте консоль для деталей.', onConfirm: () => setShowModal(false), isConfirm: false }); setShowModal(true); }
-    }, [roomId, gridSize, walls, furniture, floorTiles, userColors, selectedColor, targetCameraPosition, targetCameraQuaternion, navigate, roomName]);
+    
     useEffect(() => {
         const loadRoomState = () => {
             if (isNaN(roomId)) { setModalContent({ title: 'Помилка завантаження', message: 'Недійсний ідентифікатор кімнати. Перенаправлення на головну сторінку.', onConfirm: () => navigate('/'), isConfirm: false }); setShowModal(true); return; }
@@ -2429,16 +2573,24 @@ export default function Edit() {
                 if (!currentUser || !Array.isArray(currentUser.rooms)) { resetAllState(); return; }
                 const roomToLoad = currentUser.rooms.find(room => room.id === roomId);
                 if (roomToLoad) {
-                    setRoomName(roomToLoad.name || `Кімната ${roomId}`); setGridSize(roomToLoad.gridSize || INITIAL_GRID_SIZE); setWalls(roomToLoad.walls || {}); setFurniture(roomToLoad.furniture || {}); setFloorTiles(roomToLoad.floorTiles || {}); setUserColors(roomToLoad.userColors || []); setSelectedColor(roomToLoad.selectedColor || BASE_COLORS[0]);
+                    setRoomName(roomToLoad.name || `Кімната ${roomId}`);
+                    setGridSize(roomToLoad.gridSize || INITIAL_GRID_SIZE);
+                    resetHistory({
+                        walls: roomToLoad.walls || {},
+                        furniture: roomToLoad.furniture || {},
+                        floorTiles: roomToLoad.floorTiles || {},
+                        userColors: roomToLoad.userColors || []
+                    });
+                    setSelectedColor(roomToLoad.selectedColor || BASE_COLORS[0]);
                     if (roomToLoad.cameraPosition && roomToLoad.cameraQuaternion) { targetCameraPosition.current.set(...roomToLoad.cameraPosition); targetCameraQuaternion.current.set(...roomToLoad.cameraQuaternion); }
                     else { targetCameraPosition.current.set(...INITIAL_CAMERA_POSITION); const tempCamera = new THREE.Camera(); tempCamera.position.set(...INITIAL_CAMERA_POSITION); tempCamera.lookAt(INITIAL_LOOK_AT_TARGET); targetCameraQuaternion.current.copy(tempCamera.quaternion); }
-                    setIsDirty(false);
                 } else { setModalContent({ title: 'Кімнату не знайдено', message: 'Кімнату не знайдено. Був ініційований новий проект.', onConfirm: () => setShowModal(false), isConfirm: false }); setShowModal(true); resetAllState(); }
             } catch (error) { setModalContent({ title: 'Помилка завантаження', message: 'Помилка під час завантаження стану кімнати. Перевірте консоль для деталей.', onConfirm: () => setShowModal(false), isConfirm: false }); setShowModal(true); resetAllState(); }
         };
         loadRoomState();
         if (!localStorage.getItem('hasSeenTutorial')) setShowTutorial(true);
-    }, [roomId, navigate, id, resetAllState]);
+    }, [roomId, navigate, id, resetAllState, resetHistory]);
+    
     const deleteRoom = useCallback(() => {
         setModalContent({
             title: 'Видалити кімнату', message: `Ви впевнені, що хочете видалити кімнату "${roomName}"? Цю дію не можна скасувати.`,
@@ -2460,9 +2612,41 @@ export default function Edit() {
 
     const addUserColor = useCallback(() => {
         if (customColor && !userColors.includes(customColor.toUpperCase()) && !BASE_COLORS.find(c => c.toUpperCase() === customColor.toUpperCase())) {
-            updateUserColors(prev => [...prev, customColor]);
+            updateState(prev => ({ ...prev, userColors: [...prev.userColors, customColor] }));
         }
-    }, [customColor, userColors, updateUserColors]);
+    }, [customColor, userColors, updateState]);
+
+    const handleSaveAndExit = useCallback(() => {
+        if (isNaN(roomId)) {
+            console.error("Invalid room ID, cannot save.");
+            navigate('/');
+            return;
+        }
+        try {
+            const userJson = localStorage.getItem('user');
+            if (userJson) {
+                const currentUser = JSON.parse(userJson);
+                if (currentUser && Array.isArray(currentUser.rooms)) {
+                    const roomIndex = currentUser.rooms.findIndex(room => room.id === roomId);
+                    if (roomIndex !== -1) {
+                        currentUser.rooms[roomIndex] = {
+                            ...currentUser.rooms[roomIndex],
+                            name: roomName,
+                            gridSize,
+                            ...state,
+                            selectedColor,
+                            cameraPosition: targetCameraPosition.current.toArray(),
+                            cameraQuaternion: targetCameraQuaternion.current.toArray()
+                        };
+                        localStorage.setItem('user', JSON.stringify(currentUser));
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Save on exit failed:', error);
+        }
+        navigate('/');
+    }, [roomId, roomName, gridSize, state, selectedColor, navigate]);
 
     return (
         <div id="root" style={{ ...styles.root, display: 'flex', flexDirection: 'column', height: '100vh', background: '#1F2937' }}>
@@ -2473,6 +2657,10 @@ export default function Edit() {
                 .inventory-panel {
                     -ms-overflow-style: none;
                     scrollbar-width: none;
+                }
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
                 }
             `}</style>
 
@@ -2491,15 +2679,15 @@ export default function Edit() {
                         key={JSON.stringify(graphicsSettings)}
                     >
                         <CanvasContent
-                            getKey={getKey} rotateObject={rotateObject} snapToWall={snapToWall} checkGridExpansion={checkGridExpansion} selectedTool={selectedTool} selectedColor={selectedColor} furniture={furniture} walls={walls} floorTiles={floorTiles} hoveredCell={hoveredCell} setHoveredCell={setHoveredCell} canvasRef={canvasRef} setFloorTiles={updateFloorTiles} setWalls={updateWalls} setFurniture={updateFurniture} isDragging={isDragging} draggedType={draggedType} draggedSubType={draggedSubType} phantomObjectPosition={phantomObjectPosition} setPhantomObjectPosition={setPhantomObjectPosition} phantomObjectRotation={phantomObjectRotation} setPhantomObjectRotation={setPhantomObjectRotation} setIsDragging={setIsDragging} setDraggedType={setDraggedType} setDraggedSubType={setDraggedSubType} handleContextMenu={handleContextMenu} keyPressed={keyPressed} targetCameraPosition={targetCameraPosition} targetCameraQuaternion={targetCameraQuaternion} mobileMovementInput={mobileMovementInput} cameraRotationInput={cameraRotationInput} cameraVerticalInput={cameraVerticalInput} updateNeighboringWindows={updateNeighboringWindows} draggedItemData={draggedItemData} setDraggedItemData={setDraggedItemData} contextMenuTargetKey={contextMenuTargetKey}
+                            getKey={getKey} rotateObject={rotateObject} snapToWall={snapToWall} checkGridExpansion={checkGridExpansion} selectedTool={selectedTool} selectedColor={selectedColor} furniture={furniture} walls={walls} floorTiles={floorTiles} hoveredCell={hoveredCell} setHoveredCell={setHoveredCell} canvasRef={canvasRef} updateState={updateState} isDragging={isDragging} draggedType={draggedType} draggedSubType={draggedSubType} phantomObjectPosition={phantomObjectPosition} setPhantomObjectPosition={setPhantomObjectPosition} phantomObjectRotation={phantomObjectRotation} setPhantomObjectRotation={setPhantomObjectRotation} setIsDragging={setIsDragging} setDraggedType={setDraggedType} setDraggedSubType={setDraggedSubType} handleContextMenu={handleContextMenu} keyPressed={keyPressed} targetCameraPosition={targetCameraPosition} targetCameraQuaternion={targetCameraQuaternion} mobileMovementInput={mobileMovementInput} cameraRotationInput={cameraRotationInput} cameraVerticalInput={cameraVerticalInput} updateNeighboringWindows={updateNeighboringWindows} draggedItemData={draggedItemData} setDraggedItemData={setDraggedItemData} contextMenuTargetKey={contextMenuTargetKey}
                             graphicsSettings={graphicsSettings}
                         />
                         <FpsStabilizer onStable={() => setIsLoading(false)} />
                     </Canvas>
                 )}
                 <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 1000, display: 'flex', gap: '10px' }}>
-                    <HoverButton onClick={() => setShowGraphicsSettings(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em', background: '#6c757d' }} hoverStyle={{ ...styles.tutorialButtonHover, background: '#5a6268' }}>Налаштування графіки</HoverButton>
-                    <HoverButton onClick={() => setShowTutorial(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.tutorialButtonHover}>Показати туторіал</HoverButton>
+                    <HoverButton onClick={() => setShowGraphicsSettings(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em', background: '#6c757d' }} hoverStyle={{ ...styles.tutorialButtonHover, background: '#5a6268' }}>⚙️ Графіка</HoverButton>
+                    <HoverButton onClick={() => setShowTutorial(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.tutorialButtonHover}>🎓 Туторіал</HoverButton>
                 </div>
                 {isMobile && (<>
                     <div style={{ position: 'absolute', bottom: '20px', left: '20px', display: 'grid', gridTemplateColumns: 'repeat(3, 40px)', gridTemplateRows: 'repeat(3, 40px)', gap: '5px', zIndex: 1000 }}>
@@ -2527,10 +2715,17 @@ export default function Edit() {
                         {Object.entries(TOOL_TYPES).filter(([, label]) => label !== 'Меблі').map(([key, label]) => (<HoverButton key={label} onClick={() => handleToolToggle(label)} style={{ ...styles.buttonBase, ...(selectedTool === label ? styles.toolButtonActive : styles.toolButtonInactive), padding: '10px 15px', fontSize: '1em' }} hoverStyle={selectedTool === label ? styles.toolButtonActiveHover : styles.toolButtonInactiveHover}>{label}</HoverButton>))}
                     </div>
                 </div>
-                <div style={{ ...styles.inventorySection, minWidth: '300px', flex: '2 1 auto', overflowY: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
+                <div style={{ ...styles.inventorySection, minWidth: '300px', flex: '2 1 auto', overflowY: 'auto', maxHeight: 'calc(100vh - 450px)' }}>
                     <h3 style={styles.inventoryTitle}>Інвентар меблів</h3>
+                    <input
+                        type="text"
+                        placeholder="Пошук меблів..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        style={styles.searchInput}
+                    />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {Object.entries(FURNITURE_CATEGORIES).map(([category, items]) => (
+                        {Object.entries(filteredFurnitureCategories).map(([category, items]) => (
                             <div key={category}>
                                 <h4 style={styles.inventoryCategoryTitle}>{category}</h4>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -2551,15 +2746,12 @@ export default function Edit() {
                     </div>
                 </div>
                 <div style={{ ...styles.inventorySection, minWidth: '150px', flex: '0 0 auto', marginTop: 'auto' }}>
-                    <HoverButton onClick={saveRoomState} style={{ ...styles.buttonBase, ...styles.saveButton }} hoverStyle={styles.saveButtonHover}>Зберегти</HoverButton>
-                    <HoverButton onClick={resetAllState} style={{ ...styles.buttonBase, ...styles.clearButton }} hoverStyle={styles.clearButtonHover}>Очистити все</HoverButton>
-                    <HoverButton onClick={() => {
-                        if (isDirty) {
-                            setModalContent({ title: 'Вийти без збереження', message: 'Ваші зміни не збережено. Ви впевнені, що хочете вийти?', onConfirm: () => { setShowModal(false); navigate('/'); }, isConfirm: true }); setShowModal(true);
-                        } else {
-                            navigate('/');
-                        }
-                    }} style={{ ...styles.buttonBase, ...styles.exitButton }} hoverStyle={styles.exitButtonHover}>Вийти</HoverButton>
+                    <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '10px' }}>
+                        <HoverButton onClick={undo} disabled={!canUndo} style={{ ...styles.buttonBase, padding: '10px 20px', fontSize: '1em', ...(!canUndo ? styles.toolButtonInactive : styles.toolButtonActive) }} hoverStyle={styles.toolButtonActiveHover}>↩️ Назад</HoverButton>
+                        <HoverButton onClick={redo} disabled={!canRedo} style={{ ...styles.buttonBase, padding: '10px 20px', fontSize: '1em', ...(!canRedo ? styles.toolButtonInactive : styles.toolButtonActive) }} hoverStyle={styles.toolButtonActiveHover}>↪️ Вперед</HoverButton>
+                    </div>
+                    <HoverButton onClick={resetAllState} style={{ ...styles.buttonBase, ...styles.clearButton }} hoverStyle={styles.clearButtonHover}>🗑️ Очистити все</HoverButton>
+                    <HoverButton onClick={handleSaveAndExit} style={{ ...styles.buttonBase, ...styles.exitButton }} hoverStyle={styles.exitButtonHover}>🚪 Вийти</HoverButton>
                 </div>
             </div>
             <Tutorial show={showTutorial} onClose={() => setShowTutorial(false)} />
