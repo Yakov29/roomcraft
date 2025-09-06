@@ -307,6 +307,8 @@ const LERP_FACTOR = 0.2;
 
 const TOOL_TYPES = {
     wall: '🧱 Стіна',
+    narrowWall: '🧱 Вузька стіна',
+    cornerWall: '🧱 Кутова стіна',
     floor: '⬜ Підлога',
     furniture: 'Меблі',
 };
@@ -1632,7 +1634,35 @@ const WallMountedTV = React.memo(({ color, rotation, isHighlighted, isPhantom, i
     </group>
 ));
 
-const WallPhantom = React.memo(({ hasOpening }) => {
+const NarrowWall = React.memo(({ color, isHighlighted }) => {
+    const wallThickness = 0.2;
+    return (
+        <mesh position={[0, WALL_HEIGHT / 2, -0.5 + wallThickness / 2]}>
+            <boxGeometry args={[CELL_SIZE, WALL_HEIGHT, wallThickness]} />
+            <meshStandardMaterial color={color} />
+            {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+        </mesh>
+    );
+});
+
+const CornerWall = React.memo(({ color, isHighlighted }) => {
+    const wallThickness = 0.2;
+    return (
+        <group>
+            <mesh position={[0, WALL_HEIGHT / 2, -0.5 + wallThickness / 2]}>
+                <boxGeometry args={[CELL_SIZE, WALL_HEIGHT, wallThickness]} />
+                <meshStandardMaterial color={color} />
+            </mesh>
+            <mesh position={[-0.5 + wallThickness / 2, WALL_HEIGHT / 2, wallThickness / 2]}>
+                <boxGeometry args={[wallThickness, WALL_HEIGHT, CELL_SIZE - wallThickness]} />
+                <meshStandardMaterial color={color} />
+            </mesh>
+            {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+        </group>
+    );
+});
+
+const WallPhantom = React.memo(({ hasOpening, wallType }) => {
     if (hasOpening) {
         return (
             <group>
@@ -1648,11 +1678,33 @@ const WallPhantom = React.memo(({ hasOpening }) => {
             </group>
         );
     }
-    return (
-        <mesh position={[0, WALL_HEIGHT / 2, 0]} material={phantomMaterial}>
-            <boxGeometry args={[CELL_SIZE, WALL_HEIGHT, CELL_SIZE]} />
-        </mesh>
-    );
+
+    const wallThickness = 0.2;
+    switch (wallType) {
+        case TOOL_TYPES.narrowWall:
+            return (
+                <mesh position={[0, WALL_HEIGHT / 2, -0.5 + wallThickness / 2]} material={phantomMaterial}>
+                    <boxGeometry args={[CELL_SIZE, WALL_HEIGHT, wallThickness]} />
+                </mesh>
+            );
+        case TOOL_TYPES.cornerWall:
+            return (
+                <group>
+                    <mesh position={[0, WALL_HEIGHT / 2, -0.5 + wallThickness / 2]} material={phantomMaterial}>
+                        <boxGeometry args={[CELL_SIZE, WALL_HEIGHT, wallThickness]} />
+                    </mesh>
+                    <mesh position={[-0.5 + wallThickness / 2, WALL_HEIGHT / 2, wallThickness / 2]} material={phantomMaterial}>
+                        <boxGeometry args={[wallThickness, WALL_HEIGHT, CELL_SIZE - wallThickness]} />
+                    </mesh>
+                </group>
+            );
+        default: // wall
+            return (
+                <mesh position={[0, WALL_HEIGHT / 2, 0]} material={phantomMaterial}>
+                    <boxGeometry args={[CELL_SIZE, WALL_HEIGHT, CELL_SIZE]} />
+                </mesh>
+            );
+    }
 });
 
 const Wall = React.memo(({ color, hasOpening, isHighlighted }) => {
@@ -1708,10 +1760,7 @@ const Tutorial = ({ show, onClose }) => {
         { title: "Прив'язка до Стіни (Клавіша)", text: `Щоб прив'язати меблі до краю блоку (до стіни), наведіть на об'єкт і натисніть "T". Об'єкт переміститься до найближчої стіни замість центру блоку.` },
         { title: "Історія Змін (Undo/Redo)", text: `Використовуйте кнопки "Назад" та "Вперед" у лівій панелі або комбінації клавіш Ctrl+Z / Ctrl+Shift+Z для скасування та повторення дій.` },
         { title: "Збереження при виході", text: `Ваш прогрес автоматично зберігається при натисканні кнопки "Вийти".` },
-        { title: "Керування Камерою (Клавіатура)", text: `Використовуйте клавіші WASD для переміщення вперед/назад/вбік.
-Використовуйте E для руху вгору та Q для руху вниз.
-Використовуйте стрілки вліво/вправо для повороту камери.
-Використовуйте стрілки вгору/вниз для нахилу камери.` },
+        { title: "Керування Камерою (Клавіатура)", text: `Використовуйте клавіші WASD для переміщення вперед/назад/вбік.\nВикористовуйте E для руху вгору та Q для руху вниз.\nВикористовуйте стрілки вліво/вправо для повороту камери.\nВикористовуйте стрілки вгору/вниз для нахилу камери.` },
         { title: "Готово!", text: `Ви освоїли основи! Насолоджуйтесь створенням свого дизайну!` }
     ], []);
 
@@ -2263,7 +2312,9 @@ export default function Edit() {
             const itemInfo = allFurnitureItems.find(item => item.type === furniture[key].type);
             target = { type: 'furniture', name: itemInfo?.label || 'Меблі', key, item: furniture[key] };
         } else if (walls[key]) {
-            target = { type: 'wall', name: 'Стіна', key, item: walls[key] };
+            const wallData = walls[key];
+            const wallName = wallData.type || TOOL_TYPES.wall;
+            target = { type: 'wall', name: wallName, key, item: wallData };
         } else if (floorTiles[key]) {
             target = { type: 'floor', name: 'Підлога', key, item: floorTiles[key] };
         }
@@ -2353,8 +2404,9 @@ export default function Edit() {
         
         useEffect(() => {
             const handleKeyDown = (e) => {
-                const key = e.key.toLowerCase();
-                if (e.ctrlKey && key === 'z') {
+                keyPressed.current[e.code] = true;
+
+                if (e.ctrlKey && e.code === 'KeyZ') {
                     e.preventDefault();
                     if (e.shiftKey) {
                         redo();
@@ -2363,32 +2415,64 @@ export default function Edit() {
                     }
                     return;
                 }
-                keyPressed.current[key] = true;
-                if (key === 'r') { rotateObject(); e.preventDefault(); }
-                else if (key === 't') { snapToWall(); e.preventDefault(); }
+                
+                if (e.code === 'KeyR') { rotateObject(); e.preventDefault(); }
+                else if (e.code === 'KeyT') { snapToWall(); e.preventDefault(); }
             };
-            const handleKeyUp = (e) => { const key = e.key.toLowerCase(); keyPressed.current[key] = false; };
+            const handleKeyUp = (e) => { 
+                keyPressed.current[e.code] = false; 
+            };
             window.addEventListener('keydown', handleKeyDown);
             window.addEventListener('keyup', handleKeyUp);
             return () => {
                 window.removeEventListener('keydown', handleKeyDown);
                 window.removeEventListener('keyup', handleKeyUp);
             };
-        }, [rotateObject, snapToWall, keyPressed, undo, redo]);
+        }, [rotateObject, snapToWall, undo, redo]);
 
         useFrame((_, delta) => {
-            const moveAmount = MOVEMENT_SPEED * delta * 60; const verticalMoveAmount = VERTICAL_MOVEMENT_SPEED * delta * 60; const rotateAmountYaw = ROTATION_SPEED_KEYBOARD_YAW * delta * 60; const rotateAmountPitch = ROTATION_SPEED_KEYBOARD_PITCH * delta * 60;
-            let newCameraPosition = camera.position.clone(); const currentQuaternion = camera.quaternion;
-            const forward = new Vector3(0, 0, -1).applyQuaternion(currentQuaternion); const right = new Vector3(1, 0, 0).applyQuaternion(currentQuaternion); forward.y = 0; right.y = 0; forward.normalize(); right.normalize();
-            if (keyPressed.current['w']) newCameraPosition.addScaledVector(forward, moveAmount); if (keyPressed.current['s']) newCameraPosition.addScaledVector(forward, -moveAmount); if (keyPressed.current['a']) newCameraPosition.addScaledVector(right, -moveAmount); if (keyPressed.current['d']) newCameraPosition.addScaledVector(right, moveAmount);
-            if (keyPressed.current['e']) newCameraPosition.y += verticalMoveAmount; if (keyPressed.current['q']) newCameraPosition.y -= verticalMoveAmount;
-            if (mobileMovementInput.current.forward) newCameraPosition.addScaledVector(forward, moveAmount); if (mobileMovementInput.current.backward) newCameraPosition.addScaledVector(forward, -moveAmount); if (mobileMovementInput.current.left) newCameraPosition.addScaledVector(right, -moveAmount); if (mobileMovementInput.current.right) newCameraPosition.addScaledVector(right, moveAmount);
+            const moveAmount = MOVEMENT_SPEED * delta * 60; 
+            const verticalMoveAmount = VERTICAL_MOVEMENT_SPEED * delta * 60; 
+            const rotateAmountYaw = ROTATION_SPEED_KEYBOARD_YAW * delta * 60; 
+            const rotateAmountPitch = ROTATION_SPEED_KEYBOARD_PITCH * delta * 60;
+            
+            let newCameraPosition = camera.position.clone(); 
+            const currentQuaternion = camera.quaternion;
+            const forward = new Vector3(0, 0, -1).applyQuaternion(currentQuaternion); 
+            const right = new Vector3(1, 0, 0).applyQuaternion(currentQuaternion); 
+            forward.y = 0; 
+            right.y = 0; 
+            forward.normalize(); 
+            right.normalize();
+            
+            if (keyPressed.current['KeyW']) newCameraPosition.addScaledVector(forward, moveAmount); 
+            if (keyPressed.current['KeyS']) newCameraPosition.addScaledVector(forward, -moveAmount); 
+            if (keyPressed.current['KeyA']) newCameraPosition.addScaledVector(right, -moveAmount); 
+            if (keyPressed.current['KeyD']) newCameraPosition.addScaledVector(right, moveAmount);
+            if (keyPressed.current['KeyE']) newCameraPosition.y += verticalMoveAmount; 
+            if (keyPressed.current['KeyQ']) newCameraPosition.y -= verticalMoveAmount;
+            
+            if (mobileMovementInput.current.forward) newCameraPosition.addScaledVector(forward, moveAmount); 
+            if (mobileMovementInput.current.backward) newCameraPosition.addScaledVector(forward, -moveAmount); 
+            if (mobileMovementInput.current.left) newCameraPosition.addScaledVector(right, -moveAmount); 
+            if (mobileMovementInput.current.right) newCameraPosition.addScaledVector(right, moveAmount);
+            
             newCameraPosition.y += cameraVerticalInput.current * verticalMoveAmount;
-            targetCameraPosition.current.copy(newCameraPosition); camera.position.lerp(targetCameraPosition.current, LERP_FACTOR);
+            targetCameraPosition.current.copy(newCameraPosition); 
+            camera.position.lerp(targetCameraPosition.current, LERP_FACTOR);
+            
             let currentEuler = new Euler().setFromQuaternion(camera.quaternion, 'YXZ');
-            if (keyPressed.current['arrowleft']) currentEuler.y += rotateAmountYaw; if (keyPressed.current['arrowright']) currentEuler.y -= rotateAmountYaw; if (keyPressed.current['arrowdown']) currentEuler.x = Math.max(-PI_2 + 0.01, currentEuler.x - rotateAmountPitch); if (keyPressed.current['arrowup']) currentEuler.x = Math.min(PI_2 - 0.01, currentEuler.x + rotateAmountPitch);
-            currentEuler.y += cameraRotationInput.current.yaw * rotateAmountYaw; currentEuler.x = Math.max(-PI_2 + 0.01, Math.min(PI_2 - 0.01, currentEuler.x + cameraRotationInput.current.pitch * rotateAmountPitch));
-            currentEuler.z = 0; targetCameraQuaternion.current.setFromEuler(currentEuler); camera.quaternion.slerp(targetCameraQuaternion.current, LERP_FACTOR);
+            if (keyPressed.current['ArrowLeft']) currentEuler.y += rotateAmountYaw; 
+            if (keyPressed.current['ArrowRight']) currentEuler.y -= rotateAmountYaw; 
+            if (keyPressed.current['ArrowDown']) currentEuler.x = Math.max(-PI_2 + 0.01, currentEuler.x - rotateAmountPitch); 
+            if (keyPressed.current['ArrowUp']) currentEuler.x = Math.min(PI_2 - 0.01, currentEuler.x + rotateAmountPitch);
+            
+            currentEuler.y += cameraRotationInput.current.yaw * rotateAmountYaw; 
+            currentEuler.x = Math.max(-PI_2 + 0.01, Math.min(PI_2 - 0.01, currentEuler.x + cameraRotationInput.current.pitch * rotateAmountPitch));
+            currentEuler.z = 0; 
+            
+            targetCameraQuaternion.current.setFromEuler(currentEuler); 
+            camera.quaternion.slerp(targetCameraQuaternion.current, LERP_FACTOR);
         });
         const getIntersectionPoint = useCallback((event) => { const raycaster = new Raycaster(); const mouse = new THREE.Vector2(); const rect = gl.domElement.getBoundingClientRect(); mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1; mouse.y = - ((event.clientY - rect.top) / rect.height) * 2 + 1; raycaster.setFromCamera(mouse, camera); const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -FLOOR_LEVEL); const intersectionPoint = new Vector3(); raycaster.ray.intersectPlane(plane, intersectionPoint); return intersectionPoint; }, [gl, camera]);
         
@@ -2396,7 +2480,8 @@ export default function Edit() {
             e.stopPropagation();
             const domEvent = e.nativeEvent || e; if (domEvent.button === 2 || isDragging) return;
             const clickedKey = getKey(x, z);
-            if (selectedTool === TOOL_TYPES.floor || selectedTool === TOOL_TYPES.wall) {
+            const wallTools = [TOOL_TYPES.wall, TOOL_TYPES.narrowWall, TOOL_TYPES.cornerWall];
+            if (selectedTool === TOOL_TYPES.floor || wallTools.includes(selectedTool)) {
                 setIsDragging(true); setDraggedType(selectedTool); setDraggedSubType(null); setPhantomObjectRotation(0); setDraggedItemData(null);
                 return;
             } else if (furniture[clickedKey] && (furniture[clickedKey].type !== 'door' && furniture[clickedKey].type !== 'window')) {
@@ -2454,6 +2539,7 @@ export default function Edit() {
                     const finalZ = Math.round(phantomObjectPosition.z);
                     const key = getKey(finalX, finalZ);
                     const isPlacementValid = newState.floorTiles[key] && (!newState.furniture[key] || ['door', 'window'].includes(newState.furniture[key]?.type));
+                    const wallTools = [TOOL_TYPES.wall, TOOL_TYPES.narrowWall, TOOL_TYPES.cornerWall];
 
                     if (draggedType === TOOL_TYPES.floor) {
                         newState.floorTiles = { ...newState.floorTiles, [key]: selectedColor };
@@ -2468,9 +2554,9 @@ export default function Edit() {
                             newState.furniture = newFurniture;
                         }
                         checkGridExpansion(finalX, finalZ);
-                    } else if (draggedType === TOOL_TYPES.wall) {
+                    } else if (wallTools.includes(draggedType)) {
                         if (newState.floorTiles[key] && (!newState.furniture[key] || (newState.furniture[key].type !== 'door' && newState.furniture[key].type !== 'window'))) {
-                            newState.walls = { ...newState.walls, [key]: { color: selectedColor, hasOpening: false, rotation: phantomObjectRotation } };
+                            newState.walls = { ...newState.walls, [key]: { type: draggedType, color: selectedColor, hasOpening: false, rotation: phantomObjectRotation } };
                             checkGridExpansion(finalX, finalZ);
                         }
                     } else if (draggedType === TOOL_TYPES.furniture) {
@@ -2487,7 +2573,7 @@ export default function Edit() {
                             newState.furniture = updatedFurniture;
 
                             if (['door', 'window'].includes(draggedSubType)) {
-                                newState.walls = { ...newState.walls, [key]: { color: selectedColor, hasOpening: true, rotation: phantomObjectRotation } };
+                                newState.walls = { ...newState.walls, [key]: { type: TOOL_TYPES.wall, color: selectedColor, hasOpening: true, rotation: phantomObjectRotation } };
                             } else if (newState.walls[key] && !newState.walls[key].hasOpening) {
                                 const newWalls = { ...newState.walls };
                                 delete newWalls[key];
@@ -2515,7 +2601,12 @@ export default function Edit() {
 
             if (Component) return <Component color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} neighborLeft={neighborLeft} neighborRight={neighborRight} neighborFront={neighborFront} neighborBack={neighborBack} phantomMaterial={currentPhantomMaterial} isOn={isOn} graphicsSettings={graphicsSettings} />;
             if (itemType === TOOL_TYPES.floor) return <FloorPhantom />;
-            if (itemType === TOOL_TYPES.wall) { const key = hoveredCell ? getKey(hoveredCell.x, hoveredCell.z) : null; const hasOpening = key && furniture[key] && ['door', 'window'].includes(furniture[key].type); return <WallPhantom hasOpening={hasOpening} />; }
+            const wallTools = [TOOL_TYPES.wall, TOOL_TYPES.narrowWall, TOOL_TYPES.cornerWall];
+            if (wallTools.includes(itemType)) {
+                const key = hoveredCell ? getKey(hoveredCell.x, hoveredCell.z) : null;
+                const hasOpening = key && furniture[key] && ['door', 'window'].includes(furniture[key].type);
+                return <WallPhantom hasOpening={hasOpening} wallType={itemType} />;
+            }
             return null;
         }, [hoveredCell, furniture, getKey, graphicsSettings]);
 
@@ -2535,7 +2626,25 @@ export default function Edit() {
                 {Object.entries(items).map(([key, wallData]) => {
                     const [x, z] = key.split(',').map(Number);
                     const isHighlighted = !isDragging && ((hoveredCell && hoveredCell.x === x && hoveredCell.z === z) || contextMenuTargetKey === key);
-                    return <group key={`wall-${key}`} position={[x, FLOOR_LEVEL, z]} rotation={[0, wallData.rotation || 0, 0]} onPointerDown={(e) => handlePointerDown(e, x, z)} onPointerMove={handlePointerMove} onContextMenu={(e) => handleContextMenu(e, x, z)}><Wall color={wallData.color} hasOpening={wallData.hasOpening} isHighlighted={isHighlighted} /></group>;
+                    
+                    let WallComponent;
+                    switch (wallData.type) {
+                        case TOOL_TYPES.narrowWall:
+                            WallComponent = NarrowWall;
+                            break;
+                        case TOOL_TYPES.cornerWall:
+                            WallComponent = CornerWall;
+                            break;
+                        case TOOL_TYPES.wall:
+                        default:
+                            WallComponent = Wall;
+                    }
+
+                    return (
+                        <group key={`wall-${key}`} position={[x, FLOOR_LEVEL, z]} rotation={[0, wallData.rotation || 0, 0]} onPointerDown={(e) => handlePointerDown(e, x, z)} onPointerMove={handlePointerMove} onContextMenu={(e) => handleContextMenu(e, x, z)}>
+                            <WallComponent color={wallData.color} hasOpening={wallData.hasOpening} isHighlighted={isHighlighted} />
+                        </group>
+                    );
                 })}
             </>
         ));
@@ -2560,7 +2669,7 @@ export default function Edit() {
             <directionalLight position={[20, 30, 20]} intensity={1} castShadow={graphicsSettings.shadows} />
             <primitive object={gridHelper} position={[0, FLOOR_LEVEL + 0.01, 0]} />
             {hoveredCell && !isDragging && (<mesh position={[hoveredCell.x, FLOOR_LEVEL + 0.02, hoveredCell.z]} material={hoverMaterial} castShadow receiveShadow><boxGeometry args={[1, 0.01, 1]} /></mesh>)}
-            {isDragging && draggedType && phantomObjectPosition && (<group position={[phantomObjectPosition.x, FLOOR_LEVEL, phantomObjectPosition.z]}>{renderComponent({ type: draggedType === TOOL_TYPES.furniture ? draggedSubType : draggedType, color: draggedItemData ? draggedItemData.color : selectedColor, rotation: phantomObjectRotation }, true, isPhantomPlacementValid)}</group>)}
+            {isDragging && draggedType && phantomObjectPosition && (<group position={[phantomObjectPosition.x, FLOOR_LEVEL, phantomObjectPosition.z]} rotation={[0, phantomObjectRotation, 0]}>{renderComponent({ type: draggedType === TOOL_TYPES.furniture ? draggedSubType : draggedType, color: draggedItemData ? draggedItemData.color : selectedColor, rotation: 0 }, true, isPhantomPlacementValid)}</group>)}
             <mesh position={[0, FLOOR_LEVEL, 0]} rotation={[-Math.PI / 2, 0, 0]} onPointerMove={handlePointerMove} onPointerDown={(e) => handlePointerDown(e, Math.round(e.point.x), Math.round(e.point.z))} onContextMenu={(e) => { e.stopPropagation(); if (hoveredCell) handleContextMenu(e, hoveredCell.x, hoveredCell.z); }} visible={true}><planeGeometry args={[gridSize * 2 + 1, gridSize * 2 + 1]} /><meshStandardMaterial transparent opacity={0.0} /></mesh>
             <MemoizedFloors items={floorTiles} />
             <MemoizedWalls items={walls} />
