@@ -321,8 +321,8 @@ const FURNITURE_CATEGORIES = {
         { type: 'sofa', label: 'Диван', dimensions: { width: 1.6, depth: 0.8, height: 0.8 } },
         { type: 'armchair', label: 'Крісло', dimensions: { width: 0.8, depth: 0.8, height: 0.9 } },
         { type: 'chair', label: 'Стілець', dimensions: { width: 0.6, depth: 0.6, height: 0.8 } },
-        { type: 'barStool', label: 'Барный стул', dimensions: { width: 0.4, depth: 0.4, height: 1.0 } },
-        { type: 'beanBag', label: 'Кресло-мешок', dimensions: { width: 0.8, depth: 0.8, height: 0.6 } },
+        { type: 'barStool', label: 'Барний стілець', dimensions: { width: 0.4, depth: 0.4, height: 1.0 } },
+        { type: 'beanBag', label: 'Крісло-мішок', dimensions: { width: 0.8, depth: 0.8, height: 0.6 } },
         { type: 'table', label: 'Стіл', dimensions: { width: 1.0, depth: 0.8, height: 0.8 } },
         { type: 'coffeeTable', label: 'Журнальний стіл', dimensions: { width: 0.8, depth: 0.5, height: 0.4 } },
         { type: 'fireplace', label: 'Камін', dimensions: { width: 1.5, depth: 0.5, height: 1.2 } },
@@ -330,7 +330,7 @@ const FURNITURE_CATEGORIES = {
     '🗄️ Зберігання': [
         { type: 'bookshelf', label: 'Книжкова шафа', dimensions: { width: 1.0, depth: 0.3, height: 1.8 } },
         { type: 'cabinet', label: 'Шафа', dimensions: { width: 1.0, depth: 0.5, height: 2.0 } },
-        { type: 'wardrobe', label: 'Шафа для одягу', dimensions: { width: 1.5, depth: 0.6, height: 2.2 } },
+        { type: 'wardrobe', label: 'Гардеробна шафа', dimensions: { width: 1.5, depth: 0.6, height: 2.2 } },
         { type: 'dresser', label: 'Комод', dimensions: { width: 1.2, depth: 0.5, height: 0.9 } },
         { type: 'nightstand', label: 'Тумбочка', dimensions: { width: 0.5, depth: 0.4, height: 0.6 } },
         { type: 'wallShelf', label: 'Настінна полиця', dimensions: { width: 1.2, depth: 0.25, height: 0.1 } },
@@ -347,7 +347,7 @@ const FURNITURE_CATEGORIES = {
     '🌳 Вулиця': [
         { type: 'outdoorChair', label: 'Вуличний стілець', dimensions: { width: 0.6, depth: 0.6, height: 0.5 } },
         { type: 'outdoorTable', label: 'Вуличний стіл', dimensions: { width: 1.0, depth: 1.0, height: 0.75 } },
-        { type: 'grill', label: 'Гриль', dimensions: { width: 0.7, depth: 0.5, height: 1.0 } },
+        { type: 'grill', label: 'Мангал', dimensions: { width: 0.7, depth: 0.5, height: 1.0 } },
         { type: 'gardenBench', label: 'Садова лавка', dimensions: { width: 1.5, depth: 0.5, height: 0.6 } },
     ],
     '🛏️ Спальня': [
@@ -355,11 +355,11 @@ const FURNITURE_CATEGORIES = {
     ],
     '💻 Техніка та розваги': [
         { type: 'tv', label: 'Телевізор', dimensions: { width: 1.2, depth: 0.3, height: 1.0 } },
-        { type: 'wallMountedTV', label: 'Підвісний телевізор', dimensions: { width: 1.2, depth: 0.06, height: 0.7 } },
-        { type: 'console', label: 'Консоль', dimensions: { width: 0.4, depth: 0.1, height: 0.6 } },
+        { type: 'wallMountedTV', label: 'Настінний телевізор', dimensions: { width: 1.2, depth: 0.06, height: 0.7 } },
+        { type: 'console', label: 'Ігрова консоль', dimensions: { width: 0.4, depth: 0.1, height: 0.6 } },
         { type: 'computerSetup', label: 'Комп’ютер', dimensions: { width: 1.6, depth: 0.7, height: 1.0 } },
         { type: 'piano', label: 'Рояль', dimensions: { width: 1.5, depth: 1.5, height: 1.0 } },
-        { type: 'projectorScreen', label: 'Экран проектора', dimensions: { width: 2.0, depth: 0.1, height: 1.2 } },
+        { type: 'projectorScreen', label: 'Екран проєктора', dimensions: { width: 2.0, depth: 0.1, height: 1.2 } },
     ],
     '💡 Освітлення': [
         { type: 'lamp', label: 'Торшер', dimensions: { width: 0.3, depth: 0.3, height: 1.1 } },
@@ -369,15 +369,15 @@ const FURNITURE_CATEGORIES = {
     '🌿 Декор та рослини': [
         { type: 'pottedPlant', label: 'Кімнатна рослина', dimensions: { width: 0.4, depth: 0.4, height: 0.8 } },
         { type: 'tallPlant', label: 'Висока рослина', dimensions: { width: 0.5, depth: 0.5, height: 1.5 } },
-        { type: 'rug', label: 'Ковер', dimensions: { width: 2.0, depth: 3.0, height: 0.02 } },
-        { type: 'mirror', label: 'Зеркало', dimensions: { width: 0.6, depth: 0.05, height: 1.2 } },
-        { type: 'aquarium', label: 'Аквариум', dimensions: { width: 1.0, depth: 0.4, height: 0.6 } },
+        { type: 'rug', label: 'Килим', dimensions: { width: 2.0, depth: 3.0, height: 0.02 } },
+        { type: 'mirror', label: 'Дзеркало', dimensions: { width: 0.6, depth: 0.05, height: 1.2 } },
+        { type: 'aquarium', label: 'Акваріум', dimensions: { width: 1.0, depth: 0.4, height: 0.6 } },
     ],
     '🚿 Ванна кімната': [
         { type: 'toilet', label: 'Унітаз', dimensions: { width: 0.4, depth: 0.7, height: 0.7 } },
-        { type: 'sink', label: 'Раковина', dimensions: { width: 0.6, depth: 0.5, height: 0.8 } },
+        { type: 'sink', label: 'Умивальник', dimensions: { width: 0.6, depth: 0.5, height: 0.8 } },
         { type: 'bathtub', label: 'Ванна', dimensions: { width: 1.7, depth: 0.8, height: 0.6 } },
-        { type: 'shower', label: 'Душ', dimensions: { width: 0.9, depth: 0.9, height: 2.0 } },
+        { type: 'shower', label: 'Душова кабіна', dimensions: { width: 0.9, depth: 0.9, height: 2.0 } },
     ],
     '🏢 Офіс': [
         { type: 'desk', label: 'Письмовий стіл', dimensions: { width: 1.4, depth: 0.7, height: 0.75 } },
@@ -389,6 +389,7 @@ const FURNITURE_CATEGORIES = {
         { type: 'diningChair', label: 'Обідній стілець', dimensions: { width: 0.5, depth: 0.5, height: 0.9 } },
     ]
 };
+
 
 const useHistory = (initialState) => {
     const [history, setHistory] = useState([initialState]);
