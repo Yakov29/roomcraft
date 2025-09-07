@@ -306,8 +306,8 @@ const ROTATION_SPEED_KEYBOARD_PITCH = 0.1;
 const LERP_FACTOR = 0.2;
 
 const TOOL_TYPES = {
-    wall: '🧱 Стіна',
-    narrowWall: '🧱 Вузька стіна',
+    wall: '🧱 Несуча стіна',
+    narrowWall: '🧱 Звичайна стіна',
     cornerWall: '🧱 Кутова стіна',
     floor: '⬜ Підлога',
     furniture: 'Меблі',
@@ -338,8 +338,10 @@ const FURNITURE_CATEGORIES = {
         { type: 'wallShelf', label: 'Настінна полиця', dimensions: { width: 1.2, depth: 0.25, height: 0.1 } },
     ],
     '🚪 Двері та вікна': [
-        { type: 'door', label: 'Двері', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
-        { type: 'window', label: 'Вікно', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
+        { type: 'door', label: 'Двері (для несущої)', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
+        { type: 'window', label: 'Вікно (для несущої)', dimensions: { width: 0.9, depth: 0.05, height: WALL_HEIGHT } },
+        { type: 'narrowDoor', label: 'Двері (для звичайної)', dimensions: { width: 0.9, depth: 0.2, height: WALL_HEIGHT } },
+        { type: 'narrowWindow', label: 'Вікно (для звичайної)', dimensions: { width: 0.9, depth: 0.2, height: WALL_HEIGHT } },
     ],
     '🧑‍🍳 Кухня': [
         { type: 'kitchenTable', label: 'Кухонний стіл', dimensions: { width: 1.2, depth: 0.7, height: 0.8 } },
@@ -441,15 +443,41 @@ const calculateWallSnapPosition = (x, z, walls, floorTiles, getKey, furnitureIte
     const halfEffectiveWidth = (Math.abs(Math.cos(rotation)) * width + Math.abs(Math.sin(rotation)) * depth) / 2;
     const halfEffectiveDepth = (Math.abs(Math.sin(rotation)) * width + Math.abs(Math.cos(rotation)) * depth) / 2;
     if (!floorTiles[getKey(x, z)]) return { x, z, snapped: false, offsetX: 0, offsetZ: 0 };
+
     const potentialSnaps = [
-        { wallX: x - 1, wallZ: z, offsetX: -0.5 + halfEffectiveWidth, offsetZ: 0 },
-        { wallX: x + 1, wallZ: z, offsetX: 0.5 - halfEffectiveWidth, offsetZ: 0 },
-        { wallX: x, wallZ: z - 1, offsetX: 0, offsetZ: -0.5 + halfEffectiveDepth },
-        { wallX: x, wallZ: z + 1, offsetX: 0, offsetZ: 0.5 - halfEffectiveDepth },
+        { wallX: x - 1, wallZ: z, dir: 'east' },
+        { wallX: x + 1, wallZ: z, dir: 'west' },
+        { wallX: x, wallZ: z - 1, dir: 'south' },
+        { wallX: x, wallZ: z + 1, dir: 'north' },
     ];
+
     for (const snap of potentialSnaps) {
         const wallKey = getKey(snap.wallX, snap.wallZ);
-        if (walls[wallKey] && !walls[wallKey].hasOpening) return { x, z, snapped: true, offsetX: snap.offsetX, offsetZ: snap.offsetZ };
+        const wall = walls[wallKey];
+        if (wall && !wall.hasOpening) {
+            const wallThickness = (wall.type === TOOL_TYPES.narrowWall || wall.type === TOOL_TYPES.cornerWall) ? 0.2 : CELL_SIZE;
+            const halfWallThickness = wallThickness / 2;
+            
+            let offsetX = 0, offsetZ = 0;
+
+            switch(snap.dir) {
+                case 'east': // wall at x-1
+                    offsetX = halfEffectiveWidth - 1 + halfWallThickness;
+                    break;
+                case 'west': // wall at x+1
+                    offsetX = -halfEffectiveWidth + 1 - halfWallThickness;
+                    break;
+                case 'south': // wall at z-1
+                    offsetZ = halfEffectiveDepth - 1 + halfWallThickness;
+                    break;
+                case 'north': // wall at z+1
+                    offsetZ = -halfEffectiveDepth + 1 - halfWallThickness;
+                    break;
+                default:
+                    continue;
+            }
+            return { x, z, snapped: true, offsetX, offsetZ };
+        }
     }
     return { x, z, snapped: false, offsetX: 0, offsetZ: 0 };
 };
@@ -504,7 +532,7 @@ const ContextMenu = ({ menuState, onAction, onColorSelect, baseColors, userColor
     if (!menuState.visible) return null;
 
     const { x, y, target } = menuState;
-    const isActionable = target.type === 'furniture' && target.item.type !== 'door' && target.item.type !== 'window';
+    const isActionable = target.type === 'furniture' && target.item.type !== 'door' && target.item.type !== 'window' && target.item.type !== 'narrowDoor' && target.item.type !== 'narrowWindow';
     const isToggleable = target.item && ['lamp', 'ceilingLamp', 'tv', 'aquarium', 'rgbStrip', 'wallMountedTV'].includes(target.item.type);
     const toggleText = target?.item?.isOn ? 'Вимкнути' : 'Увімкнути';
 
@@ -1176,43 +1204,37 @@ const Painting = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
 ));
 
 const Door = React.memo(({ color = '#5A2D0C', rotation = 0, isHighlighted, isPhantom }) => {
-  const doorHeight = WALL_HEIGHT * 0.7;
-  const doorWidth = 0.85;
-  const frameThickness = 0.05;
-  const handleHeight = doorHeight / 2;
-  const handleWidth = 0.15;
-  const handleDepth = 0.03;
-  const handleThickness = 0.02;
+    const wallThickness = CELL_SIZE;
+    const frameDepth = wallThickness - 0.04;
 
   return (
     <group rotation={[0, rotation, 0]}>
-      <mesh position={[0, doorHeight / 2, 0]}>
-        <boxGeometry args={[doorWidth, doorHeight, 0.05]} />
+      <mesh position={[0, (WALL_HEIGHT * 0.7) / 2, 0]}>
+        <boxGeometry args={[0.8, WALL_HEIGHT * 0.7, 0.05]} />
         <Material isPhantom={isPhantom} color={color} roughness={0.3} metalness={0.1} />
       </mesh>
 
-      <mesh position={[0, doorHeight + 0.025, -0.03]}>
-        <boxGeometry args={[doorWidth + frameThickness, 0.05, 0.06]} />
+      <mesh position={[0, WALL_HEIGHT * 0.7 + 0.025, 0]}>
+        <boxGeometry args={[0.9, 0.05, frameDepth]} />
         <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
       </mesh>
 
-      <mesh position={[-doorWidth / 2 - frameThickness / 2, doorHeight / 2, -0.03]}>
-        <boxGeometry args={[frameThickness, doorHeight, 0.06]} />
+      <mesh position={[-0.425, (WALL_HEIGHT * 0.7) / 2, 0]}>
+        <boxGeometry args={[0.05, WALL_HEIGHT * 0.7, frameDepth]} />
         <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
       </mesh>
 
-      <mesh position={[doorWidth / 2 + frameThickness / 2, doorHeight / 2, -0.03]}>
-        <boxGeometry args={[frameThickness, doorHeight, 0.06]} />
+      <mesh position={[0.425, (WALL_HEIGHT * 0.7) / 2, 0]}>
+        <boxGeometry args={[0.05, WALL_HEIGHT * 0.7, frameDepth]} />
         <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
       </mesh>
 
-      <mesh position={[doorWidth / 4, handleHeight, 0.035]}>
-        <boxGeometry args={[handleWidth, handleThickness, handleDepth]} />
+      <mesh position={[0.3, (WALL_HEIGHT * 0.7) / 2, 0.08]}>
+        <boxGeometry args={[0.1, 0.02, 0.02]} />
         <Material isPhantom={isPhantom} color="#FFD700" metalness={1} roughness={0.15} />
       </mesh>
-
-      <mesh position={[doorWidth / 4, handleHeight, -0.035]}>
-        <boxGeometry args={[handleWidth, handleThickness, handleDepth]} />
+      <mesh position={[0.3, (WALL_HEIGHT * 0.7) / 2, -0.08]}>
+        <boxGeometry args={[0.1, 0.02, 0.02]} />
         <Material isPhantom={isPhantom} color="#FFD700" metalness={1} roughness={0.15} />
       </mesh>
 
@@ -1221,22 +1243,117 @@ const Door = React.memo(({ color = '#5A2D0C', rotation = 0, isHighlighted, isPha
   );
 });
 
-
-const Window = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
-    const windowWidth = 0.9;
+const NarrowDoor = React.memo(({ color = '#5A2D0C', rotation = 0, isHighlighted, isPhantom }) => {
+    const frameDepth = 0.18; // wallThickness (0.2) - 0.02
     return (
         <group rotation={[0, rotation, 0]}>
-            <mesh position={[0, WALL_HEIGHT / 2, 0]}>
-                <boxGeometry args={[windowWidth, WALL_HEIGHT, 0.01]} />
-                <Material
-                    isPhantom={isPhantom}
-                    color={color}
-                    transparent
-                    opacity={0.5}
-                    roughness={0.1}
-                    metalness={0.2}
-                />
+            <mesh position={[0, (WALL_HEIGHT * 0.7) / 2, 0]}>
+                <boxGeometry args={[0.8, WALL_HEIGHT * 0.7, 0.05]} />
+                <Material isPhantom={isPhantom} color={color} roughness={0.3} metalness={0.1} />
             </mesh>
+            
+            <mesh position={[0, WALL_HEIGHT * 0.7 + 0.025, 0]}>
+                <boxGeometry args={[0.9, 0.05, frameDepth]} />
+                <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
+            </mesh>
+            
+            <mesh position={[-0.425, (WALL_HEIGHT * 0.7) / 2, 0]}>
+                <boxGeometry args={[0.05, WALL_HEIGHT * 0.7, frameDepth]} />
+                <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
+            </mesh>
+            
+            <mesh position={[0.425, (WALL_HEIGHT * 0.7) / 2, 0]}>
+                <boxGeometry args={[0.05, WALL_HEIGHT * 0.7, frameDepth]} />
+                <Material isPhantom={isPhantom} color="#3B2A1A" roughness={0.4} />
+            </mesh>
+
+            <mesh position={[0.3, (WALL_HEIGHT * 0.7) / 2, 0.08]}>
+                <boxGeometry args={[0.1, 0.02, 0.02]} />
+                <Material isPhantom={isPhantom} color="#FFD700" metalness={1} roughness={0.15} />
+            </mesh>
+            <mesh position={[0.3, (WALL_HEIGHT * 0.7) / 2, -0.08]}>
+                <boxGeometry args={[0.1, 0.02, 0.02]} />
+                <Material isPhantom={isPhantom} color="#FFD700" metalness={1} roughness={0.15} />
+            </mesh>
+            {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+        </group>
+    );
+});
+
+const Window = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
+    const windowHeight = WALL_HEIGHT * 0.7;
+    const totalWidth = 0.9;
+    const wallThickness = CELL_SIZE;
+    const frameWidth = 0.05;
+    const frameDepth = wallThickness - 0.04;
+
+    return (
+        <group rotation={[0, rotation, 0]}>
+            <mesh position={[0, windowHeight / 2, 0]}>
+                <boxGeometry args={[totalWidth - 2 * frameWidth, windowHeight - 2 * frameWidth, 0.01]} />
+                <Material isPhantom={isPhantom} color={"#ADD8E6"} transparent opacity={0.5} roughness={0.1} metalness={0.2} />
+            </mesh>
+
+            <mesh position={[0, windowHeight - frameWidth / 2, 0]}>
+                <boxGeometry args={[totalWidth, frameWidth, frameDepth]} />
+                <Material isPhantom={isPhantom} color="#A0AEC0" />
+            </mesh>
+
+            <mesh position={[0, frameWidth / 2, 0]}>
+                <boxGeometry args={[totalWidth, frameWidth, frameDepth]} />
+                <Material isPhantom={isPhantom} color="#A0AEC0" />
+            </mesh>
+
+            <mesh position={[-totalWidth / 2 + frameWidth / 2, windowHeight / 2, 0]}>
+                <boxGeometry args={[frameWidth, windowHeight - 2 * frameWidth, frameDepth]} />
+                <Material isPhantom={isPhantom} color="#A0AEC0" />
+            </mesh>
+
+            <mesh position={[totalWidth / 2 - frameWidth / 2, windowHeight / 2, 0]}>
+                <boxGeometry args={[frameWidth, windowHeight - 2 * frameWidth, frameDepth]} />
+                <Material isPhantom={isPhantom} color="#A0AEC0" />
+            </mesh>
+
+            {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+        </group>
+    );
+});
+
+const NarrowWindow = React.memo(({ color, rotation, isHighlighted, isPhantom }) => {
+    const windowHeight = WALL_HEIGHT;
+    const totalWidth = 0.9;
+    const wallThickness = 0.2;
+    const frameWidth = 0.05;
+    const frameDepth = wallThickness - 0.02;
+
+    return (
+        <group rotation={[0, rotation, 0]}>
+            
+            <mesh position={[0, windowHeight / 2, 0]}>
+                <boxGeometry args={[totalWidth - 2 * frameWidth, windowHeight - 2 * frameWidth, 0.01]} />
+                <Material isPhantom={isPhantom} color={"#ADD8E6"} transparent opacity={0.5} roughness={0.1} metalness={0.2} />
+            </mesh>
+            
+            <mesh position={[0, windowHeight - frameWidth / 2, 0]}>
+                <boxGeometry args={[totalWidth, frameWidth, frameDepth]} />
+                <Material isPhantom={isPhantom} color="#A0AEC0" />
+            </mesh>
+            
+            <mesh position={[0, frameWidth / 2, 0]}>
+                <boxGeometry args={[totalWidth, frameWidth, frameDepth]} />
+                <Material isPhantom={isPhantom} color="#A0AEC0" />
+            </mesh>
+            
+            <mesh position={[-totalWidth / 2 + frameWidth / 2, windowHeight / 2, 0]}>
+                <boxGeometry args={[frameWidth, windowHeight - 2 * frameWidth, frameDepth]} />
+                <Material isPhantom={isPhantom} color="#A0AEC0" />
+            </mesh>
+            
+            <mesh position={[totalWidth / 2 - frameWidth / 2, windowHeight / 2, 0]}>
+                <boxGeometry args={[frameWidth, windowHeight - 2 * frameWidth, frameDepth]} />
+                <Material isPhantom={isPhantom} color="#A0AEC0" />
+            </mesh>
+
             {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
         </group>
     );
@@ -1634,10 +1751,39 @@ const WallMountedTV = React.memo(({ color, rotation, isHighlighted, isPhantom, i
     </group>
 ));
 
-const NarrowWall = React.memo(({ color, isHighlighted }) => {
+const NarrowWall = React.memo(({ color, hasOpening, isHighlighted, furnitureType }) => {
     const wallThickness = 0.2;
+    const zOffset = 0;
+    if (hasOpening) {
+        const openingWidth = 0.9; // Same as narrow window/door
+        const isWindow = furnitureType === 'narrowWindow';
+        const openingHeight = isWindow ? WALL_HEIGHT : WALL_HEIGHT * 0.7;
+        const sideWidth = (CELL_SIZE - openingWidth) / 2;
+        return (
+            <group>
+                {/* Left part */}
+                <mesh position={[-CELL_SIZE / 2 + sideWidth / 2, WALL_HEIGHT / 2, zOffset]}>
+                    <boxGeometry args={[sideWidth, WALL_HEIGHT, wallThickness]} />
+                    <meshStandardMaterial color={color} />
+                </mesh>
+                {/* Right part */}
+                <mesh position={[CELL_SIZE / 2 - sideWidth / 2, WALL_HEIGHT / 2, zOffset]}>
+                    <boxGeometry args={[sideWidth, WALL_HEIGHT, wallThickness]} />
+                    <meshStandardMaterial color={color} />
+                </mesh>
+                {/* Top part */}
+                {!isWindow && (
+                    <mesh position={[0, openingHeight + (WALL_HEIGHT - openingHeight) / 2, zOffset]}>
+                        <boxGeometry args={[openingWidth, WALL_HEIGHT - openingHeight, wallThickness]} />
+                        <meshStandardMaterial color={color} />
+                    </mesh>
+                )}
+                {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+            </group>
+        );
+    }
     return (
-        <mesh position={[0, WALL_HEIGHT / 2, -0.5 + wallThickness / 2]}>
+        <mesh position={[0, WALL_HEIGHT / 2, zOffset]}>
             <boxGeometry args={[CELL_SIZE, WALL_HEIGHT, wallThickness]} />
             <meshStandardMaterial color={color} />
             {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
@@ -1649,12 +1795,16 @@ const CornerWall = React.memo(({ color, isHighlighted }) => {
     const wallThickness = 0.2;
     return (
         <group>
-            <mesh position={[0, WALL_HEIGHT / 2, -0.5 + wallThickness / 2]}>
-                <boxGeometry args={[CELL_SIZE, WALL_HEIGHT, wallThickness]} />
+            <mesh position={[-0.25, WALL_HEIGHT / 2, 0]}>
+                <boxGeometry args={[0.5, WALL_HEIGHT, wallThickness]} />
                 <meshStandardMaterial color={color} />
             </mesh>
-            <mesh position={[-0.5 + wallThickness / 2, WALL_HEIGHT / 2, wallThickness / 2]}>
-                <boxGeometry args={[wallThickness, WALL_HEIGHT, CELL_SIZE - wallThickness]} />
+            <mesh position={[0, WALL_HEIGHT / 2, -0.25]}>
+                <boxGeometry args={[wallThickness, WALL_HEIGHT, 0.5]} />
+                <meshStandardMaterial color={color} />
+            </mesh>
+            <mesh position={[0, WALL_HEIGHT / 2, 0]}>
+                <boxGeometry args={[wallThickness, WALL_HEIGHT, wallThickness]} />
                 <meshStandardMaterial color={color} />
             </mesh>
             {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
@@ -1693,8 +1843,8 @@ const WallPhantom = React.memo(({ hasOpening, wallType }) => {
                     <mesh position={[0, WALL_HEIGHT / 2, -0.5 + wallThickness / 2]} material={phantomMaterial}>
                         <boxGeometry args={[CELL_SIZE, WALL_HEIGHT, wallThickness]} />
                     </mesh>
-                    <mesh position={[-0.5 + wallThickness / 2, WALL_HEIGHT / 2, wallThickness / 2]} material={phantomMaterial}>
-                        <boxGeometry args={[wallThickness, WALL_HEIGHT, CELL_SIZE - wallThickness]} />
+                    <mesh position={[-0.5 + wallThickness / 2, WALL_HEIGHT / 2, 0]} material={phantomMaterial}>
+                        <boxGeometry args={[wallThickness, WALL_HEIGHT, CELL_SIZE]} />
                     </mesh>
                 </group>
             );
@@ -1707,20 +1857,27 @@ const WallPhantom = React.memo(({ hasOpening, wallType }) => {
     }
 });
 
-const Wall = React.memo(({ color, hasOpening, isHighlighted }) => {
+const Wall = React.memo(({ color, hasOpening, isHighlighted, furnitureType }) => {
     if (hasOpening) {
+        const openingWidth = 0.9;
+        const openingHeight = WALL_HEIGHT * 0.7;
+        const sideWidth = (CELL_SIZE - openingWidth) / 2;
+
         return (
             <group>
-                <mesh position={[-0.45, WALL_HEIGHT / 2, 0]}>
-                    <boxGeometry args={[0.1, WALL_HEIGHT, CELL_SIZE]} />
+                {/* Left part */}
+                <mesh position={[-CELL_SIZE / 2 + sideWidth / 2, WALL_HEIGHT / 2, 0]}>
+                    <boxGeometry args={[sideWidth, WALL_HEIGHT, CELL_SIZE]} />
                     <meshStandardMaterial color={color} />
                 </mesh>
-                <mesh position={[0.45, WALL_HEIGHT / 2, 0]}>
-                    <boxGeometry args={[0.1, WALL_HEIGHT, CELL_SIZE]} />
+                {/* Right part */}
+                <mesh position={[CELL_SIZE / 2 - sideWidth / 2, WALL_HEIGHT / 2, 0]}>
+                    <boxGeometry args={[sideWidth, WALL_HEIGHT, CELL_SIZE]} />
                     <meshStandardMaterial color={color} />
                 </mesh>
-                <mesh position={[0, WALL_HEIGHT - 0.05 / 2, 0]}>
-                    <boxGeometry args={[CELL_SIZE, 0.05, CELL_SIZE]} />
+                {/* Top part (lintel) */}
+                <mesh position={[0, openingHeight + (WALL_HEIGHT - openingHeight) / 2, 0]}>
+                    <boxGeometry args={[openingWidth, WALL_HEIGHT - openingHeight, CELL_SIZE]} />
                     <meshStandardMaterial color={color} />
                 </mesh>
                 {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
@@ -1744,7 +1901,7 @@ const FloorPhantom = React.memo(() => (
 
 const FURNITURE_COMPONENTS = {
     sofa: Sofa, chair: Chair, table: Table, coffeeTable: CoffeeTable, bookshelf: Bookshelf, armchair: Armchair, fireplace: Fireplace, door: Door, window: Window, kitchenTable: KitchenTable, kitchenCabinet: KitchenCabinet, outdoorChair: OutdoorChair, outdoorTable: OutdoorTable, grill: Grill, gardenBench: GardenBench, bed: Bed, lamp: Lamp, cabinet: Cabinet, dresser: Dresser, nightstand: Nightstand, wardrobe: Wardrobe, tv: TV, console: Console, computerSetup: ComputerSetup, ceilingLamp: CeilingLamp, rgbStrip: RgbStrip, pottedPlant: PottedPlant, tallPlant: TallPlant, toilet: Toilet, sink: Sink, bathtub: Bathtub, shower: Shower, desk: Desk, officeChair: OfficeChair, filingCabinet: FilingCabinet, diningTable: DiningTable, diningChair: DiningChair,
-    rug: Rug, mirror: Mirror, barStool: BarStool, aquarium: Aquarium, piano: Piano, beanBag: BeanBag, wallShelf: WallShelf, projectorScreen: ProjectorScreen, barTable: BarTable, wallMountedTV: WallMountedTV,
+    rug: Rug, mirror: Mirror, barStool: BarStool, aquarium: Aquarium, piano: Piano, beanBag: BeanBag, wallShelf: WallShelf, projectorScreen: ProjectorScreen, barTable: BarTable, wallMountedTV: WallMountedTV, narrowDoor: NarrowDoor, narrowWindow: NarrowWindow
 };
 
 const Tutorial = ({ show, onClose }) => {
@@ -2231,7 +2388,7 @@ export default function Edit() {
                     }
                     newState.furniture = updatedFurniture;
 
-                    if (['door', 'window'].includes(currentFurniture.type) && newState.walls[key]?.hasOpening) {
+                    if (['door', 'window', 'narrowDoor', 'narrowWindow'].includes(currentFurniture.type) && newState.walls[key]?.hasOpening) {
                         newState.walls = { ...newState.walls, [key]: { ...newState.walls[key], rotation: newRotation } };
                     }
                 } else if (newState.walls[key] && !newState.walls[key].hasOpening) {
@@ -2248,7 +2405,7 @@ export default function Edit() {
 
         updateState(prev => {
             const furnitureItem = prev.furniture[key];
-            if (!furnitureItem || ['door', 'window'].includes(furnitureItem.type)) return prev;
+            if (!furnitureItem || ['door', 'window', 'narrowDoor', 'narrowWindow'].includes(furnitureItem.type)) return prev;
 
             const [x, z] = key.split(',').map(Number);
             const furnitureDimensions = allFurnitureItems.find(item => item.type === furnitureItem.type)?.dimensions;
@@ -2283,7 +2440,7 @@ export default function Edit() {
                     });
                 }
                 newState.furniture = newFurniture;
-                if (['door', 'window'].includes(removedType)) {
+                if (['door', 'window', 'narrowDoor', 'narrowWindow'].includes(removedType)) {
                     const newWalls = { ...newState.walls };
                     if (newWalls[targetKey]?.hasOpening) {
                         delete newWalls[targetKey];
@@ -2329,7 +2486,7 @@ export default function Edit() {
             const itemToDrag = furniture[key];
             const [x, z] = key.split(',').map(Number);
 
-            if (itemToDrag.type === 'door' || itemToDrag.type === 'window') return;
+            if ([ 'door', 'window', 'narrowDoor', 'narrowWindow' ].includes(itemToDrag.type)) return;
 
             setIsDragging(true);
             setDraggedType(TOOL_TYPES.furniture);
@@ -2445,9 +2602,9 @@ export default function Edit() {
             forward.normalize(); 
             right.normalize();
             
-            if (keyPressed.current['KeyW']) newCameraPosition.addScaledVector(forward, moveAmount); 
-            if (keyPressed.current['KeyS']) newCameraPosition.addScaledVector(forward, -moveAmount); 
-            if (keyPressed.current['KeyA']) newCameraPosition.addScaledVector(right, -moveAmount); 
+            if (keyPressed.current['KeyW']) newCameraPosition.addScaledVector(forward, moveAmount);
+            if (keyPressed.current['KeyS']) newCameraPosition.addScaledVector(forward, -moveAmount);
+            if (keyPressed.current['KeyA']) newCameraPosition.addScaledVector(right, -moveAmount);
             if (keyPressed.current['KeyD']) newCameraPosition.addScaledVector(right, moveAmount);
             if (keyPressed.current['KeyE']) newCameraPosition.y += verticalMoveAmount; 
             if (keyPressed.current['KeyQ']) newCameraPosition.y -= verticalMoveAmount;
@@ -2538,7 +2695,7 @@ export default function Edit() {
                     const finalX = Math.round(phantomObjectPosition.x);
                     const finalZ = Math.round(phantomObjectPosition.z);
                     const key = getKey(finalX, finalZ);
-                    const isPlacementValid = newState.floorTiles[key] && (!newState.furniture[key] || ['door', 'window'].includes(newState.furniture[key]?.type));
+                    const isPlacementValid = newState.floorTiles[key] && (!newState.furniture[key] || ['door', 'window', 'narrowDoor', 'narrowWindow'].includes(newState.furniture[key]?.type));
                     const wallTools = [TOOL_TYPES.wall, TOOL_TYPES.narrowWall, TOOL_TYPES.cornerWall];
 
                     if (draggedType === TOOL_TYPES.floor) {
@@ -2548,7 +2705,7 @@ export default function Edit() {
                             delete newWalls[key];
                             newState.walls = newWalls;
                         }
-                        if (newState.furniture[key] && !['door', 'window'].includes(newState.furniture[key].type)) {
+                        if (newState.furniture[key] && !['door', 'window', 'narrowDoor', 'narrowWindow'].includes(newState.furniture[key].type)) {
                             const newFurniture = { ...newState.furniture };
                             delete newFurniture[key];
                             newState.furniture = newFurniture;
@@ -2574,6 +2731,8 @@ export default function Edit() {
 
                             if (['door', 'window'].includes(draggedSubType)) {
                                 newState.walls = { ...newState.walls, [key]: { type: TOOL_TYPES.wall, color: selectedColor, hasOpening: true, rotation: phantomObjectRotation } };
+                            } else if (['narrowDoor', 'narrowWindow'].includes(draggedSubType)) {
+                                newState.walls = { ...newState.walls, [key]: { type: TOOL_TYPES.narrowWall, color: selectedColor, hasOpening: true, rotation: phantomObjectRotation } };
                             } else if (newState.walls[key] && !newState.walls[key].hasOpening) {
                                 const newWalls = { ...newState.walls };
                                 delete newWalls[key];
@@ -2604,7 +2763,7 @@ export default function Edit() {
             const wallTools = [TOOL_TYPES.wall, TOOL_TYPES.narrowWall, TOOL_TYPES.cornerWall];
             if (wallTools.includes(itemType)) {
                 const key = hoveredCell ? getKey(hoveredCell.x, hoveredCell.z) : null;
-                const hasOpening = key && furniture[key] && ['door', 'window'].includes(furniture[key].type);
+                const hasOpening = key && furniture[key] && ['door', 'window', 'narrowDoor', 'narrowWindow'].includes(furniture[key].type);
                 return <WallPhantom hasOpening={hasOpening} wallType={itemType} />;
             }
             return null;
@@ -2612,20 +2771,21 @@ export default function Edit() {
 
         const gridHelper = useMemo(() => new GridHelper(gridSize * 2, gridSize * 2, '#4B5563', '#4B5563'), [gridSize]);
 
-        const MemoizedFloors = React.memo(({ items }) => (
+        const MemoizedFloors = React.memo(({ items, furniture }) => (
             <>
                 {Object.entries(items).map(([key, color]) => {
                     const [x, z] = key.split(',').map(Number);
-                    return <mesh key={`floor-${key}`} position={[x, FLOOR_LEVEL, z]} onPointerDown={(e) => handlePointerDown(e, x, z)} onPointerMove={handlePointerMove} onContextMenu={(e) => handleContextMenu(e, x, z)} castShadow receiveShadow><boxGeometry args={[1, 0.1, 1]} /><meshStandardMaterial color={color} /></mesh>;
+                    return <mesh key={`floor-${key}`} position={[x, FLOOR_LEVEL - 0.05, z]} onPointerDown={(e) => handlePointerDown(e, x, z)} onPointerMove={handlePointerMove} onContextMenu={(e) => handleContextMenu(e, x, z)} castShadow receiveShadow><boxGeometry args={[1, 0.1, 1]} /><meshStandardMaterial color={color} /></mesh>;
                 })}
             </>
         ));
 
-        const MemoizedWalls = React.memo(({ items }) => (
+        const MemoizedWalls = React.memo(({ items, furniture }) => (
             <>
                 {Object.entries(items).map(([key, wallData]) => {
                     const [x, z] = key.split(',').map(Number);
                     const isHighlighted = !isDragging && ((hoveredCell && hoveredCell.x === x && hoveredCell.z === z) || contextMenuTargetKey === key);
+                    const furnitureInCell = furniture[key];
                     
                     let WallComponent;
                     switch (wallData.type) {
@@ -2642,7 +2802,7 @@ export default function Edit() {
 
                     return (
                         <group key={`wall-${key}`} position={[x, FLOOR_LEVEL, z]} rotation={[0, wallData.rotation || 0, 0]} onPointerDown={(e) => handlePointerDown(e, x, z)} onPointerMove={handlePointerMove} onContextMenu={(e) => handleContextMenu(e, x, z)}>
-                            <WallComponent color={wallData.color} hasOpening={wallData.hasOpening} isHighlighted={isHighlighted} />
+                            <WallComponent color={wallData.color} hasOpening={wallData.hasOpening} isHighlighted={isHighlighted} furnitureType={furnitureInCell?.type} />
                         </group>
                     );
                 })}
@@ -2662,17 +2822,17 @@ export default function Edit() {
             </>
         ));
 
-        const isPhantomPlacementValid = useMemo(() => { if (!phantomObjectPosition) return false; const key = getKey(phantomObjectPosition.x, phantomObjectPosition.z); return floorTiles[key] && (!furniture[key] || ['door', 'window'].includes(furniture[key]?.type)); }, [phantomObjectPosition, floorTiles, furniture, getKey]);
+        const isPhantomPlacementValid = useMemo(() => { if (!phantomObjectPosition) return false; const key = getKey(phantomObjectPosition.x, phantomObjectPosition.z); return floorTiles[key] && (!furniture[key] || ['door', 'window', 'narrowDoor', 'narrowWindow'].includes(furniture[key]?.type)); }, [phantomObjectPosition, floorTiles, furniture, getKey]);
 
         return (<>
             <ambientLight intensity={0.5} />
             <directionalLight position={[20, 30, 20]} intensity={1} castShadow={graphicsSettings.shadows} />
             <primitive object={gridHelper} position={[0, FLOOR_LEVEL + 0.01, 0]} />
-            {hoveredCell && !isDragging && (<mesh position={[hoveredCell.x, FLOOR_LEVEL + 0.02, hoveredCell.z]} material={hoverMaterial} castShadow receiveShadow><boxGeometry args={[1, 0.01, 1]} /></mesh>)}
+            {/* {hoveredCell && !isDragging && (<mesh position={[hoveredCell.x, FLOOR_LEVEL + 0.02, hoveredCell.z]} material={hoverMaterial} castShadow receiveShadow><boxGeometry args={[1, 0.01, 1]} /></mesh>)} */}
             {isDragging && draggedType && phantomObjectPosition && (<group position={[phantomObjectPosition.x, FLOOR_LEVEL, phantomObjectPosition.z]} rotation={[0, phantomObjectRotation, 0]}>{renderComponent({ type: draggedType === TOOL_TYPES.furniture ? draggedSubType : draggedType, color: draggedItemData ? draggedItemData.color : selectedColor, rotation: 0 }, true, isPhantomPlacementValid)}</group>)}
             <mesh position={[0, FLOOR_LEVEL, 0]} rotation={[-Math.PI / 2, 0, 0]} onPointerMove={handlePointerMove} onPointerDown={(e) => handlePointerDown(e, Math.round(e.point.x), Math.round(e.point.z))} onContextMenu={(e) => { e.stopPropagation(); if (hoveredCell) handleContextMenu(e, hoveredCell.x, hoveredCell.z); }} visible={true}><planeGeometry args={[gridSize * 2 + 1, gridSize * 2 + 1]} /><meshStandardMaterial transparent opacity={0.0} /></mesh>
             <MemoizedFloors items={floorTiles} />
-            <MemoizedWalls items={walls} />
+            <MemoizedWalls items={walls} furniture={furniture} />
             <MemoizedFurniture items={furniture} />
             <Preload all />
         </>);
@@ -2805,6 +2965,8 @@ export default function Edit() {
                 <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 1000, display: 'flex', gap: '10px' }}>
                     <HoverButton onClick={() => setShowGraphicsSettings(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em', background: '#6c757d' }} hoverStyle={{ ...styles.tutorialButtonHover, background: '#5a6268' }}>⚙️ Графіка</HoverButton>
                     <HoverButton onClick={() => setShowTutorial(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.tutorialButtonHover}>🎓 Туторіал</HoverButton>
+                    <HoverButton onClick={resetAllState} style={{ ...styles.buttonBase, ...styles.clearButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.clearButtonHover}>🗑️ Очистити</HoverButton>
+                    <HoverButton onClick={handleSaveAndExit} style={{ ...styles.buttonBase, ...styles.exitButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.exitButtonHover}>🚪 Вийти</HoverButton>
                 </div>
                 {isMobile && (<>
                     <div style={{ position: 'absolute', bottom: '20px', left: '20px', display: 'grid', gridTemplateColumns: 'repeat(3, 40px)', gridTemplateRows: 'repeat(3, 40px)', gap: '5px', zIndex: 1000 }}>
@@ -2867,8 +3029,6 @@ export default function Edit() {
                         <HoverButton onClick={undo} disabled={!canUndo} style={{ ...styles.buttonBase, padding: '10px 20px', fontSize: '1em', ...(!canUndo ? styles.toolButtonInactive : styles.toolButtonActive) }} hoverStyle={styles.toolButtonActiveHover}>↩️ Назад</HoverButton>
                         <HoverButton onClick={redo} disabled={!canRedo} style={{ ...styles.buttonBase, padding: '10px 20px', fontSize: '1em', ...(!canRedo ? styles.toolButtonInactive : styles.toolButtonActive) }} hoverStyle={styles.toolButtonActiveHover}>↪️ Вперед</HoverButton>
                     </div>
-                    <HoverButton onClick={resetAllState} style={{ ...styles.buttonBase, ...styles.clearButton }} hoverStyle={styles.clearButtonHover}>🗑️ Очистити все</HoverButton>
-                    <HoverButton onClick={handleSaveAndExit} style={{ ...styles.buttonBase, ...styles.exitButton }} hoverStyle={styles.exitButtonHover}>🚪 Вийти</HoverButton>
                 </div>
             </div>
             <Tutorial show={showTutorial} onClose={() => setShowTutorial(false)} />
