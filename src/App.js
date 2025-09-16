@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import NProgress from "nprogress";
 import "nprogress/nprogress.css";
-import logo from "./logo.png"
+import logo from "./logo.png";
 
 import Homepage from "./pages/Homepage/Homepage";
 import GetStarted from "./pages/GetStarted/GetStarted";
@@ -11,8 +11,8 @@ import User from "./pages/User/User";
 import Rooms from "./pages/Rooms/Rooms";
 import Create from "./pages/Create/Create";
 import Edit from "./pages/Edit/Edit";
+import Vlog from "./pages/Vlog/Vlog";
 import Footer from "./components/Footer/Footer";
-
 
 function App() {
   const location = useLocation();
@@ -56,11 +56,11 @@ function App() {
           }
         />
         <Route path="/user/:id" element={<User />} />
+        <Route path="/vlog" element={<Vlog />} />
         <Route path="/user/:id/rooms" element={<Rooms />} />
         <Route path="/create" element={<Create />} />
         <Route path="/edit/:id" element={<Edit />} />
       </Routes>
-
     </div>
   );
 }

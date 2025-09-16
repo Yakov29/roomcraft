@@ -47,7 +47,6 @@ const Header = () => {
     const handleAboutClick = (e) => {
         e.preventDefault();
         closeMenu();
-
         if (location.pathname === "/") {
             const section = document.getElementById("about");
             if (section) {
@@ -61,7 +60,6 @@ const Header = () => {
     const handleFooterClick = (e) => {
         e.preventDefault();
         closeMenu();
-
         if (location.pathname === "/") {
             const section = document.getElementById("footer");
             if (section) {
@@ -75,7 +73,6 @@ const Header = () => {
     const handleHomeClick = (e) => {
         e.preventDefault();
         closeMenu();
-
         if (location.pathname === "/") {
             window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
@@ -102,6 +99,11 @@ const Header = () => {
                         <a href="/#winner" className="header__link" onClick={handleAboutClick}>
                             Про проєкт
                         </a>
+                    </li>
+                    <li className="header__item" data-aos="fade-up" data-aos-delay="325">
+                        <Link to="/vlog" className="header__link" onClick={closeMenu}>
+                            Влог
+                        </Link>
                     </li>
                     <li className="header__item" data-aos="fade-up" data-aos-delay="350">
                         <a href="/#footer" className="header__link" onClick={handleFooterClick}>
