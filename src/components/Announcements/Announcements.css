@@ -1,9 +1,11 @@
 .announcements {
-  padding-top: 100px;
-    padding-bottom: 100px;
+  padding-top: 150px;
+  padding-bottom: 100px;
+  height: 100vh;
   position: relative;
   overflow: hidden;
   background-color: var(--background-color);
+  justify-content: center;
   text-align: center;
   box-sizing: border-box;
 }
