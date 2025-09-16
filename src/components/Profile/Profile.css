@@ -4,32 +4,7 @@
   padding-bottom: 50px;
   position: relative;
   overflow: hidden;
-  background-color: var(--background-color);
   z-index: 1;
-}
-
-.profile::before {
-  content: "";
-  position: absolute;
-  top: -80%;
-  left: -80%;
-  width: 260%;
-  height: 260%;
-  z-index: 0;
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-@keyframes moveCircles {
-  0% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  50% {
-    transform: translate(50px, 30px) rotate(180deg);
-  }
-  100% {
-    transform: translate(0, 0) rotate(360deg);
-  }
 }
 
 .profile__title {
@@ -107,7 +82,6 @@
   justify-content: center;
   gap: 20px;
   flex-wrap: wrap;
-  background: var(--background-color);
   z-index: 10;
 }
 
