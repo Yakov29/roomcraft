@@ -9,6 +9,19 @@ const Developer = () => {
         AOS.init({ duration: 1000 });
     }, []);
 
+    const getAge = (birthDate) => {
+        const today = new Date();
+        const birth = new Date(birthDate);
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+            age--;
+        }
+        return age;
+    };
+
+    const age = getAge("2011-08-24");
+
     return (
         <section className="developer" data-aos="fade-up">
             <h2 className="developer__title" data-aos="fade-down">
@@ -16,7 +29,7 @@ const Developer = () => {
             </h2>
             <img className="developer__image" src={avatar} data-aos="zoom-in" />
             <p className="developer__description" data-aos="fade-up" data-aos-delay="200">
-                Привіт! 👋 Мене звати Яков, мені всього 14, але я вже впевнено крокую в світ фронтенду 🌐
+                Привіт! 👋 Мене звати Яков, мені всього {age}, але я вже впевнено крокую в світ фронтенду 🌐
                 Я з Дніпра 🇺🇦, і вже на 6-му семестрі вивчення React ⚛️
                 Створюю інтерактивні інтерфейси, 3D-проєкти, як <strong>RoomCraft</strong>, і просто обожнюю кодити 💻
                 Моя мета — створювати такі сайти, які не хочеться закривати 😍
