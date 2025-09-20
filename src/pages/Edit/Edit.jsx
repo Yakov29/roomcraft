@@ -299,11 +299,13 @@ const INITIAL_GRID_SIZE = 16;
 const FLOOR_LEVEL = 0;
 const INITIAL_CAMERA_POSITION = [20, 24, 20];
 const INITIAL_LOOK_AT_TARGET = new Vector3(0, 0, 0);
-const MOVEMENT_SPEED = 0.5;
+const MOVEMENT_SPEED = 0.25; // Slower movement
 const VERTICAL_MOVEMENT_SPEED = 0.3;
 const ROTATION_SPEED_KEYBOARD_YAW = 0.1;
 const ROTATION_SPEED_KEYBOARD_PITCH = 0.1;
 const LERP_FACTOR = 0.2;
+const BOBBING_FREQUENCY = 10;
+const BOBBING_AMPLITUDE = 0.05;
 
 const TOOL_TYPES = {
     wall: '🧱 Несуча стіна',
@@ -498,8 +500,16 @@ const Modal = ({ show, title, message, onClose, onConfirm, isConfirm = false }) 
     );
 };
 
-const ContextMenu = ({ menuState, onAction, onColorSelect, baseColors, userColors, customColor, setCustomColor, addUserColor }) => {
+const ContextMenu = ({ menuState, onAction, onColorSelect, baseColors, userColors, customColor, setCustomColor, addUserColor, onRotationChange, furniture, walls }) => {
     const menuRef = useRef(null);
+    const { target } = menuState;
+
+    const currentItem = useMemo(() => {
+        if (!target) return null;
+        if (target.type === 'furniture') return furniture[target.key];
+        if (target.type === 'wall') return walls[target.key];
+        return target.item;
+    }, [target, furniture, walls]);
 
     useEffect(() => {
         if (!menuState.visible || !menuRef.current) return;
@@ -528,13 +538,14 @@ const ContextMenu = ({ menuState, onAction, onColorSelect, baseColors, userColor
         };
     }, [menuState.visible, onAction]);
 
+    if (!menuState.visible || !target) return null;
 
-    if (!menuState.visible) return null;
+    const { x, y } = menuState;
 
-    const { x, y, target } = menuState;
     const isActionable = target.type === 'furniture' && target.item.type !== 'door' && target.item.type !== 'window' && target.item.type !== 'narrowDoor' && target.item.type !== 'narrowWindow';
-    const isToggleable = target.item && ['lamp', 'ceilingLamp', 'tv', 'aquarium', 'rgbStrip', 'wallMountedTV'].includes(target.item.type);
-    const toggleText = target?.item?.isOn ? 'Вимкнути' : 'Увімкнути';
+    const isToggleable = currentItem && ['lamp', 'ceilingLamp', 'tv', 'aquarium', 'rgbStrip', 'wallMountedTV'].includes(currentItem.type);
+    const toggleText = currentItem?.isOn ? 'Вимкнути' : 'Увімкнути';
+    const isRotatable = currentItem && (target.type === 'furniture' || (target.type === 'wall' && !currentItem.hasOpening));
 
     const handleAction = (action) => {
         onAction(action, target.key);
@@ -549,6 +560,13 @@ const ContextMenu = ({ menuState, onAction, onColorSelect, baseColors, userColor
         e.stopPropagation();
         addUserColor();
     };
+    
+    const handleRotationSlider = (e) => {
+        onRotationChange(target.key, parseInt(e.target.value, 10));
+    };
+
+    let currentRotationDegrees = currentItem?.rotation ? Math.round(THREE.MathUtils.radToDeg(currentItem.rotation)) : 0;
+    currentRotationDegrees = (currentRotationDegrees % 360 + 360) % 360; // Normalize to 0-360
 
     return (
         <div id="context-menu-div" ref={menuRef} style={{ ...styles.contextMenu, top: `${y}px`, left: `${x}px` }}>
@@ -559,7 +577,23 @@ const ContextMenu = ({ menuState, onAction, onColorSelect, baseColors, userColor
                 </HoverButton>
             )}
             <HoverButton onClick={() => handleAction('move')} style={styles.contextMenuButton} hoverStyle={styles.contextMenuButtonHover} disabled={!isActionable}>🚚 Перемістити</HoverButton>
-            <HoverButton onClick={() => handleAction('rotate')} style={styles.contextMenuButton} hoverStyle={styles.contextMenuButtonHover}>🔄 Повернути</HoverButton>
+            <HoverButton onClick={() => handleAction('rotate')} style={styles.contextMenuButton} hoverStyle={styles.contextMenuButtonHover} disabled={!isRotatable}>🔄 Повернути на 90°</HoverButton>
+            {isRotatable && (
+                 <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(75, 85, 99, 0.5)', marginTop: '4px' }}>
+                    <label style={{ fontSize: '0.9em', color: 'var(--text-color-muted)', display: 'block', marginBottom: '8px' }}>
+                        Точний поворот: {currentRotationDegrees}°
+                    </label>
+                    <input
+                        type="range"
+                        min="0"
+                        max="360"
+                        value={currentRotationDegrees}
+                        onInput={handleRotationSlider}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: '100%', cursor: 'pointer' }}
+                    />
+                </div>
+            )}
             <HoverButton onClick={() => handleAction('raise')} style={styles.contextMenuButton} hoverStyle={styles.contextMenuButtonHover} disabled={!isActionable}>🔼 Підняти</HoverButton>
             <HoverButton onClick={() => handleAction('lower')} style={styles.contextMenuButton} hoverStyle={styles.contextMenuButtonHover} disabled={!isActionable}>🔽 Опустити</HoverButton>
             <HoverButton onClick={() => handleAction('snap')} style={styles.contextMenuButton} hoverStyle={styles.contextMenuButtonHover} disabled={!isActionable}>📌 Притулити до стіни</HoverButton>
@@ -2071,9 +2105,9 @@ const GpuDetector = ({ onDetect }) => {
     return null;
 };
 
-const Preloader = () => (
+const Preloader = ({ text = "Завантаження сцени..." }) => (
     <div style={styles.preloader}>
-        <p>Завантаження сцени...</p>
+        <p>{text}</p>
         <div className="spinner" />
         <style>{`
             .spinner {
@@ -2162,6 +2196,8 @@ export default function Edit() {
     const [showGraphicsSettings, setShowGraphicsSettings] = useState(false);
     const [isGpuReady, setIsGpuReady] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [isTestDrive, setIsTestDrive] = useState(false);
+    const [isTestDriveLoading, setIsTestDriveLoading] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -2354,6 +2390,19 @@ export default function Edit() {
                 newState.walls = { ...newState.walls, [targetKey]: { ...newState.walls[targetKey], color: color } };
             } else if (newState.floorTiles[targetKey]) {
                 newState.floorTiles = { ...newState.floorTiles, [targetKey]: color };
+            }
+            return newState;
+        });
+    }, [updateState]);
+
+    const handleRotationChange = useCallback((targetKey, angleDegrees) => {
+        const angleRadians = THREE.MathUtils.degToRad(angleDegrees);
+        updateState(prev => {
+            const newState = { ...prev };
+            if (newState.furniture[targetKey]) {
+                newState.furniture = { ...newState.furniture, [targetKey]: { ...newState.furniture[targetKey], rotation: angleRadians } };
+            } else if (newState.walls[targetKey]) {
+                newState.walls = { ...newState.walls, [targetKey]: { ...newState.walls[targetKey], rotation: angleRadians } };
             }
             return newState;
         });
@@ -2553,15 +2602,19 @@ export default function Edit() {
     }, [contextMenu.visible]);
 
     function CanvasContent({
-                               getKey, rotateObject, snapToWall, checkGridExpansion, selectedTool, selectedColor, furniture, walls, floorTiles, hoveredCell, setHoveredCell, updateState, isDragging, draggedType, draggedSubType, phantomObjectPosition, setPhantomObjectPosition, phantomObjectRotation, setPhantomObjectRotation, setIsDragging, setDraggedType, setDraggedSubType, handleContextMenu, keyPressed, targetCameraPosition, targetCameraQuaternion, mobileMovementInput, cameraRotationInput, cameraVerticalInput, updateNeighboringWindows, draggedItemData, setDraggedItemData, contextMenuTargetKey, graphicsSettings
+                               getKey, rotateObject, snapToWall, checkGridExpansion, selectedTool, selectedColor, furniture, walls, floorTiles, hoveredCell, setHoveredCell, updateState, isDragging, draggedType, draggedSubType, phantomObjectPosition, setPhantomObjectPosition, phantomObjectRotation, setPhantomObjectRotation, setIsDragging, setDraggedType, setDraggedSubType, handleContextMenu, keyPressed, targetCameraPosition, targetCameraQuaternion, mobileMovementInput, cameraRotationInput, cameraVerticalInput, updateNeighboringWindows, draggedItemData, setDraggedItemData, contextMenuTargetKey, graphicsSettings, isTestDrive
                            }) {
         const { gl, camera } = useThree();
         const PI_2 = Math.PI / 2;
+        const bobbingTime = useRef(0);
+
         useEffect(() => { camera.position.copy(targetCameraPosition.current); camera.quaternion.copy(targetCameraQuaternion.current); }, [camera]);
         
         useEffect(() => {
             const handleKeyDown = (e) => {
                 keyPressed.current[e.code] = true;
+
+                if (isTestDrive) return;
 
                 if (e.ctrlKey && e.code === 'KeyZ') {
                     e.preventDefault();
@@ -2585,9 +2638,9 @@ export default function Edit() {
                 window.removeEventListener('keydown', handleKeyDown);
                 window.removeEventListener('keyup', handleKeyUp);
             };
-        }, [rotateObject, snapToWall, undo, redo]);
+        }, [rotateObject, snapToWall, undo, redo, isTestDrive]);
 
-        useFrame((_, delta) => {
+        useFrame((state, delta) => {
             const moveAmount = MOVEMENT_SPEED * delta * 60; 
             const verticalMoveAmount = VERTICAL_MOVEMENT_SPEED * delta * 60; 
             const rotateAmountYaw = ROTATION_SPEED_KEYBOARD_YAW * delta * 60; 
@@ -2601,20 +2654,31 @@ export default function Edit() {
             right.y = 0; 
             forward.normalize(); 
             right.normalize();
+
+            const isMoving = keyPressed.current['KeyW'] || keyPressed.current['KeyS'] || keyPressed.current['KeyA'] || keyPressed.current['KeyD'];
             
             if (keyPressed.current['KeyW']) newCameraPosition.addScaledVector(forward, moveAmount);
             if (keyPressed.current['KeyS']) newCameraPosition.addScaledVector(forward, -moveAmount);
             if (keyPressed.current['KeyA']) newCameraPosition.addScaledVector(right, -moveAmount);
             if (keyPressed.current['KeyD']) newCameraPosition.addScaledVector(right, moveAmount);
-            if (keyPressed.current['KeyE']) newCameraPosition.y += verticalMoveAmount; 
-            if (keyPressed.current['KeyQ']) newCameraPosition.y -= verticalMoveAmount;
+            if (!isTestDrive) {
+                if (keyPressed.current['KeyE']) newCameraPosition.y += verticalMoveAmount; 
+                if (keyPressed.current['KeyQ']) newCameraPosition.y -= verticalMoveAmount;
+            } else {
+                bobbingTime.current += delta * BOBBING_FREQUENCY * (isMoving ? 1 : 0);
+                const bobbingOffset = Math.sin(bobbingTime.current) * BOBBING_AMPLITUDE;
+                newCameraPosition.y = 1.7 + bobbingOffset;
+            }
             
             if (mobileMovementInput.current.forward) newCameraPosition.addScaledVector(forward, moveAmount); 
             if (mobileMovementInput.current.backward) newCameraPosition.addScaledVector(forward, -moveAmount); 
             if (mobileMovementInput.current.left) newCameraPosition.addScaledVector(right, -moveAmount); 
             if (mobileMovementInput.current.right) newCameraPosition.addScaledVector(right, moveAmount);
             
-            newCameraPosition.y += cameraVerticalInput.current * verticalMoveAmount;
+            if (!isTestDrive) {
+                newCameraPosition.y += cameraVerticalInput.current * verticalMoveAmount;
+            }
+
             targetCameraPosition.current.copy(newCameraPosition); 
             camera.position.lerp(targetCameraPosition.current, LERP_FACTOR);
             
@@ -2635,6 +2699,8 @@ export default function Edit() {
         
         const handlePointerDown = useCallback((e, x, z) => {
             e.stopPropagation();
+            if (isTestDrive) return;
+
             const domEvent = e.nativeEvent || e; if (domEvent.button === 2 || isDragging) return;
             const clickedKey = getKey(x, z);
             const wallTools = [TOOL_TYPES.wall, TOOL_TYPES.narrowWall, TOOL_TYPES.cornerWall];
@@ -2656,9 +2722,10 @@ export default function Edit() {
                 });
                 return;
             }
-        }, [isDragging, selectedTool, furniture, getKey, updateState, setIsDragging, setDraggedType, setDraggedSubType, setPhantomObjectRotation, setDraggedItemData]);
+        }, [isDragging, selectedTool, furniture, getKey, updateState, setIsDragging, setDraggedType, setDraggedSubType, setPhantomObjectRotation, setDraggedItemData, isTestDrive]);
 
         const handlePointerMove = useCallback((e) => {
+            if (isTestDrive) return;
             e.stopPropagation();
             const domEvent = e.nativeEvent || e; const intersectionPoint = getIntersectionPoint(domEvent);
             if (intersectionPoint) {
@@ -2669,10 +2736,11 @@ export default function Edit() {
                     if (!phantomObjectPosition || snappedX !== phantomObjectPosition.x || snappedZ !== phantomObjectPosition.z) setPhantomObjectPosition({ x: snappedX, z: snappedZ });
                 }
             } else { if (hoveredCell) setHoveredCell(null); if (isDragging && draggedType && phantomObjectPosition) setPhantomObjectPosition(null); }
-        }, [isDragging, draggedType, hoveredCell, phantomObjectPosition, getIntersectionPoint]);
+        }, [isDragging, draggedType, hoveredCell, phantomObjectPosition, getIntersectionPoint, isTestDrive]);
         
         useEffect(() => {
             const handleGlobalPointerUp = (e) => {
+                if (isTestDrive) return;
                 if (e.button !== 0 || !isDragging || !draggedType) {
                     if (isDragging && draggedItemData) {
                         const { originalKey, ...item } = draggedItemData;
@@ -2719,7 +2787,7 @@ export default function Edit() {
                     } else if (draggedType === TOOL_TYPES.furniture) {
                         if (isPlacementValid) {
                             const phantomDimensions = allFurnitureItems.find(item => item.type === draggedSubType)?.dimensions;
-                            const newFurnitureItem = { type: draggedSubType, color: draggedItemData ? draggedItemData.color : selectedColor, rotation: phantomObjectRotation, offsetX: 0, offsetZ: 0, y: draggedItemData?.y || 0, isSnapped: false, dimensions: phantomDimensions, neighborLeft: false, neighborRight: false, neighborFront: false, neighborBack: false, isOn: true };
+                            const newFurnitureItem = { type: draggedSubType, color: draggedItemData ? draggedItemData.color : selectedColor, rotation: phantomObjectRotation, offsetX: 0, offsetZ: 0, y: draggedItemData?.y || 0, isSnapped: false, dimensions: phantomDimensions, neighborLeft: false, neighborRight: false, neighborFront: false, neighborBack: false, isOn: true, isOpen: false };
                             let updatedFurniture = { ...newState.furniture, [key]: newFurnitureItem };
                             if (draggedSubType === 'window') {
                                 updatedFurniture = updateNeighboringWindows(finalX, finalZ, updatedFurniture);
@@ -2751,14 +2819,14 @@ export default function Edit() {
             };
             const currentCanvas = gl.domElement; if (currentCanvas) currentCanvas.addEventListener('pointerup', handleGlobalPointerUp);
             return () => { if (currentCanvas) currentCanvas.removeEventListener('pointerup', handleGlobalPointerUp); };
-        }, [isDragging, draggedType, draggedSubType, phantomObjectPosition, getKey, selectedColor, phantomObjectRotation, checkGridExpansion, gl, updateNeighboringWindows, draggedItemData, allFurnitureItems, updateState]);
+        }, [isDragging, draggedType, draggedSubType, phantomObjectPosition, getKey, selectedColor, phantomObjectRotation, checkGridExpansion, gl, updateNeighboringWindows, draggedItemData, allFurnitureItems, updateState, isTestDrive]);
 
         const renderComponent = useCallback((data, isPhantom = false, isPlacementValid = true, isHighlighted = false) => {
-            const { type: itemType, color, rotation = 0, neighborLeft, neighborRight, neighborFront, neighborBack, isOn } = data;
+            const { type: itemType, color, rotation = 0, neighborLeft, neighborRight, neighborFront, neighborBack, isOn, isOpen } = data;
             const currentPhantomMaterial = isPhantom && !isPlacementValid ? invalidPhantomMaterial : phantomMaterial;
             const Component = FURNITURE_COMPONENTS[itemType];
 
-            if (Component) return <Component color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} neighborLeft={neighborLeft} neighborRight={neighborRight} neighborFront={neighborFront} neighborBack={neighborBack} phantomMaterial={currentPhantomMaterial} isOn={isOn} graphicsSettings={graphicsSettings} />;
+            if (Component) return <Component color={color} rotation={rotation} isHighlighted={isHighlighted} isPhantom={isPhantom} neighborLeft={neighborLeft} neighborRight={neighborRight} neighborFront={neighborFront} neighborBack={neighborBack} phantomMaterial={currentPhantomMaterial} isOn={isOn} isOpen={isOpen} graphicsSettings={graphicsSettings} />;
             if (itemType === TOOL_TYPES.floor) return <FloorPhantom />;
             const wallTools = [TOOL_TYPES.wall, TOOL_TYPES.narrowWall, TOOL_TYPES.cornerWall];
             if (wallTools.includes(itemType)) {
@@ -2784,7 +2852,7 @@ export default function Edit() {
             <>
                 {Object.entries(items).map(([key, wallData]) => {
                     const [x, z] = key.split(',').map(Number);
-                    const isHighlighted = !isDragging && ((hoveredCell && hoveredCell.x === x && hoveredCell.z === z) || contextMenuTargetKey === key);
+                    const isHighlighted = !isDragging && !isTestDrive && ((hoveredCell && hoveredCell.x === x && hoveredCell.z === z) || contextMenuTargetKey === key);
                     const furnitureInCell = furniture[key];
                     
                     let WallComponent;
@@ -2813,7 +2881,7 @@ export default function Edit() {
             <>
                 {Object.entries(items).map(([key, furnitureData]) => {
                     const [x, z] = key.split(',').map(Number);
-                    const isHighlighted = !isDragging && ((hoveredCell && hoveredCell.x === x && hoveredCell.z === z) || contextMenuTargetKey === key);
+                    const isHighlighted = !isDragging && !isTestDrive && ((hoveredCell && hoveredCell.x === x && hoveredCell.z === z) || contextMenuTargetKey === key);
                     const positionX = x + (furnitureData.offsetX || 0);
                     const positionZ = z + (furnitureData.offsetZ || 0);
                     const positionY = FLOOR_LEVEL + (furnitureData.y || 0);
@@ -2830,7 +2898,7 @@ export default function Edit() {
             <primitive object={gridHelper} position={[0, FLOOR_LEVEL + 0.01, 0]} />
             {/* {hoveredCell && !isDragging && (<mesh position={[hoveredCell.x, FLOOR_LEVEL + 0.02, hoveredCell.z]} material={hoverMaterial} castShadow receiveShadow><boxGeometry args={[1, 0.01, 1]} /></mesh>)} */}
             {isDragging && draggedType && phantomObjectPosition && (<group position={[phantomObjectPosition.x, FLOOR_LEVEL, phantomObjectPosition.z]} rotation={[0, phantomObjectRotation, 0]}>{renderComponent({ type: draggedType === TOOL_TYPES.furniture ? draggedSubType : draggedType, color: draggedItemData ? draggedItemData.color : selectedColor, rotation: 0 }, true, isPhantomPlacementValid)}</group>)}
-            <mesh position={[0, FLOOR_LEVEL, 0]} rotation={[-Math.PI / 2, 0, 0]} onPointerMove={handlePointerMove} onPointerDown={(e) => handlePointerDown(e, Math.round(e.point.x), Math.round(e.point.z))} onContextMenu={(e) => { e.stopPropagation(); if (hoveredCell) handleContextMenu(e, hoveredCell.x, hoveredCell.z); }} visible={true}><planeGeometry args={[gridSize * 2 + 1, gridSize * 2 + 1]} /><meshStandardMaterial transparent opacity={0.0} /></mesh>
+            <mesh position={[0, FLOOR_LEVEL, 0]} rotation={[-Math.PI / 2, 0, 0]} onPointerMove={handlePointerMove} onPointerDown={(e) => handlePointerDown(e, Math.round(e.point.x), Math.round(e.point.z))} onContextMenu={(e) => { e.stopPropagation(); if (hoveredCell) handleContextMenu(e, hoveredCell.x, hoveredCell.z); }} visible={!isTestDrive}><planeGeometry args={[gridSize * 2 + 1, gridSize * 2 + 1]} /><meshStandardMaterial transparent opacity={0.0} /></mesh>
             <MemoizedFloors items={floorTiles} />
             <MemoizedWalls items={walls} furniture={furniture} />
             <MemoizedFurniture items={furniture} />
@@ -2925,6 +2993,24 @@ export default function Edit() {
         navigate('/');
     }, [roomId, roomName, gridSize, state, selectedColor, navigate]);
 
+    const toggleTestDrive = () => {
+        setIsTestDriveLoading(true);
+        setTimeout(() => {
+            setIsTestDrive(prev => {
+                const entering = !prev;
+                if (entering) {
+                    targetCameraPosition.current.y = 1.7;
+                } else {
+                    if (targetCameraPosition.current.y < 5) {
+                        targetCameraPosition.current.y = 15;
+                    }
+                }
+                return entering;
+            });
+            setIsTestDriveLoading(false);
+        }, 1000);
+    };
+
     return (
         <div id="root" style={{ ...styles.root, display: 'flex', flexDirection: 'column', height: '100vh', background: '#1F2937' }}>
             <style>{`
@@ -2943,9 +3029,9 @@ export default function Edit() {
 
             <GpuDetector onDetect={handleGpuDetect} />
 
-            {isLoading && <Preloader />}
+            {(isLoading || isTestDriveLoading) && <Preloader text={isTestDriveLoading ? "Завантаження..." : "Завантаження сцени..."} />}
 
-            <div ref={canvasRef} style={{ flex: 1, position: 'relative', visibility: isLoading ? 'hidden' : 'visible' }}>
+            <div ref={canvasRef} style={{ flex: 1, position: 'relative', visibility: (isLoading || isTestDriveLoading) ? 'hidden' : 'visible' }}>
                 {isGpuReady && (
                     <Canvas
                         shadows={graphicsSettings.shadows}
@@ -2958,17 +3044,24 @@ export default function Edit() {
                         <CanvasContent
                             getKey={getKey} rotateObject={rotateObject} snapToWall={snapToWall} checkGridExpansion={checkGridExpansion} selectedTool={selectedTool} selectedColor={selectedColor} furniture={furniture} walls={walls} floorTiles={floorTiles} hoveredCell={hoveredCell} setHoveredCell={setHoveredCell} canvasRef={canvasRef} updateState={updateState} isDragging={isDragging} draggedType={draggedType} draggedSubType={draggedSubType} phantomObjectPosition={phantomObjectPosition} setPhantomObjectPosition={setPhantomObjectPosition} phantomObjectRotation={phantomObjectRotation} setPhantomObjectRotation={setPhantomObjectRotation} setIsDragging={setIsDragging} setDraggedType={setDraggedType} setDraggedSubType={setDraggedSubType} handleContextMenu={handleContextMenu} keyPressed={keyPressed} targetCameraPosition={targetCameraPosition} targetCameraQuaternion={targetCameraQuaternion} mobileMovementInput={mobileMovementInput} cameraRotationInput={cameraRotationInput} cameraVerticalInput={cameraVerticalInput} updateNeighboringWindows={updateNeighboringWindows} draggedItemData={draggedItemData} setDraggedItemData={setDraggedItemData} contextMenuTargetKey={contextMenuTargetKey}
                             graphicsSettings={graphicsSettings}
+                            isTestDrive={isTestDrive}
                         />
                         <FpsStabilizer onStable={() => setIsLoading(false)} />
                     </Canvas>
                 )}
                 <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 1000, display: 'flex', gap: '10px' }}>
-                    <HoverButton onClick={() => setShowGraphicsSettings(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em', background: '#6c757d' }} hoverStyle={{ ...styles.tutorialButtonHover, background: '#5a6268' }}>⚙️ Графіка</HoverButton>
-                    <HoverButton onClick={() => setShowTutorial(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.tutorialButtonHover}>🎓 Туторіал</HoverButton>
-                    <HoverButton onClick={resetAllState} style={{ ...styles.buttonBase, ...styles.clearButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.clearButtonHover}>🗑️ Очистити</HoverButton>
+                    <HoverButton onClick={toggleTestDrive} style={{ ...styles.buttonBase, ...styles.saveButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.saveButtonHover}>{isTestDrive ? 'Вийти з Тест Драйву' : 'Тест Драйв'}</HoverButton>
+                    {!isTestDrive && (
+                        <>
+                            <HoverButton onClick={() => setShowGraphicsSettings(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em', background: '#6c757d' }} hoverStyle={{ ...styles.tutorialButtonHover, background: '#5a6268' }}>⚙️ Графіка</HoverButton>
+                            <HoverButton onClick={() => setShowTutorial(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.tutorialButtonHover}>🎓 Туторіал</HoverButton>
+                            <HoverButton onClick={resetAllState} style={{ ...styles.buttonBase, ...styles.clearButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.clearButtonHover}>🗑️ Очистити</HoverButton>
+                        </>
+                    )}
                     <HoverButton onClick={handleSaveAndExit} style={{ ...styles.buttonBase, ...styles.exitButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.exitButtonHover}>🚪 Вийти</HoverButton>
                 </div>
-                {isMobile && (<>
+                
+                {isMobile && !isTestDrive && (<>
                     <div style={{ position: 'absolute', bottom: '20px', left: '20px', display: 'grid', gridTemplateColumns: 'repeat(3, 40px)', gridTemplateRows: 'repeat(3, 40px)', gap: '5px', zIndex: 1000 }}>
                         <button onTouchStart={() => mobileMovementInput.current.forward = 1} onTouchEnd={() => mobileMovementInput.current.forward = 0} style={{ gridColumn: '2 / 3', gridRow: '1 / 2', background: 'rgba(0,0,0,0.3)', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1.2em', display: 'flex', justifyContent: 'center', alignItems: 'center', userSelect: 'none' }}>↑</button>
                         <button onTouchStart={() => mobileMovementInput.current.left = 1} onTouchEnd={() => mobileMovementInput.current.left = 0} style={{ gridColumn: '1 / 2', gridRow: '2 / 3', background: 'rgba(0,0,0,0.3)', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1.2em', display: 'flex', justifyContent: 'center', alignItems: 'center', userSelect: 'none' }}>←</button>
@@ -2987,63 +3080,70 @@ export default function Edit() {
                     </div>
                 </>)}
             </div>
-            <div className="inventory-panel" style={{...styles.inventoryPanel, visibility: isLoading ? 'hidden' : 'visible' }}>
-                <div style={styles.inventorySection}>
-                    <h3 style={styles.inventoryTitle}>Інструменти</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {Object.entries(TOOL_TYPES).filter(([, label]) => label !== 'Меблі').map(([key, label]) => (<HoverButton key={label} onClick={() => handleToolToggle(label)} style={{ ...styles.buttonBase, ...(selectedTool === label ? styles.toolButtonActive : styles.toolButtonInactive), padding: '10px 15px', fontSize: '1em' }} hoverStyle={selectedTool === label ? styles.toolButtonActiveHover : styles.toolButtonInactiveHover}>{label}</HoverButton>))}
+            {!isTestDrive && (
+                <div className="inventory-panel" style={{...styles.inventoryPanel, visibility: (isLoading || isTestDriveLoading) ? 'hidden' : 'visible' }}>
+                    <div style={styles.inventorySection}>
+                        <h3 style={styles.inventoryTitle}>Інструменти</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {Object.entries(TOOL_TYPES).filter(([, label]) => label !== 'Меблі').map(([key, label]) => (<HoverButton key={label} onClick={() => handleToolToggle(label)} style={{ ...styles.buttonBase, ...(selectedTool === label ? styles.toolButtonActive : styles.toolButtonInactive), padding: '10px 15px', fontSize: '1em' }} hoverStyle={selectedTool === label ? styles.toolButtonActiveHover : styles.toolButtonInactiveHover}>{label}</HoverButton>))}
+                        </div>
                     </div>
-                </div>
-                <div style={{ ...styles.inventorySection, minWidth: '300px', flex: '2 1 auto', overflowY: 'auto', maxHeight: 'calc(100vh - 450px)' }}>
-                    <h3 style={styles.inventoryTitle}>Інвентар меблів</h3>
-                    <input
-                        type="text"
-                        placeholder="Пошук меблів..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        style={styles.searchInput}
-                    />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {Object.entries(filteredFurnitureCategories).map(([category, items]) => (
-                            <div key={category}>
-                                <h4 style={styles.inventoryCategoryTitle}>{category}</h4>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                    {items.map(({ type, label }) => (
-                                        <HoverDiv
-                                            key={type}
-                                            onMouseDown={() => handleFurnitureDragStart(type)}
-                                            style={styles.furnitureItem}
-                                            hoverStyle={styles.furnitureItemHover}
-                                            title={`Перетягніть для розміщення: ${label}`}
-                                        >
-                                            {label}
-                                        </HoverDiv>
-                                    ))}
+                    <div style={{ ...styles.inventorySection, minWidth: '300px', flex: '2 1 auto', overflowY: 'auto', maxHeight: 'calc(100vh - 450px)' }}>
+                        <h3 style={styles.inventoryTitle}>Інвентар меблів</h3>
+                        <input
+                            type="text"
+                            placeholder="Пошук меблів..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            style={styles.searchInput}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {Object.entries(filteredFurnitureCategories).map(([category, items]) => (
+                                <div key={category}>
+                                    <h4 style={styles.inventoryCategoryTitle}>{category}</h4>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        {items.map(({ type, label }) => (
+                                            <HoverDiv
+                                                key={type}
+                                                onMouseDown={() => handleFurnitureDragStart(type)}
+                                                style={styles.furnitureItem}
+                                                hoverStyle={styles.furnitureItemHover}
+                                                title={`Перетягніть для розміщення: ${label}`}
+                                            >
+                                                {label}
+                                            </HoverDiv>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+                    </div>
+                    <div style={{ ...styles.inventorySection, minWidth: '150px', flex: '0 0 auto', marginTop: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '10px' }}>
+                            <HoverButton onClick={undo} disabled={!canUndo} style={{ ...styles.buttonBase, padding: '10px 20px', fontSize: '1em', ...(!canUndo ? styles.toolButtonInactive : styles.toolButtonActive) }} hoverStyle={styles.toolButtonActiveHover}>↩️ Назад</HoverButton>
+                            <HoverButton onClick={redo} disabled={!canRedo} style={{ ...styles.buttonBase, padding: '10px 20px', fontSize: '1em', ...(!canRedo ? styles.toolButtonInactive : styles.toolButtonActive) }} hoverStyle={styles.toolButtonActiveHover}>↪️ Вперед</HoverButton>
+                        </div>
                     </div>
                 </div>
-                <div style={{ ...styles.inventorySection, minWidth: '150px', flex: '0 0 auto', marginTop: 'auto' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '10px' }}>
-                        <HoverButton onClick={undo} disabled={!canUndo} style={{ ...styles.buttonBase, padding: '10px 20px', fontSize: '1em', ...(!canUndo ? styles.toolButtonInactive : styles.toolButtonActive) }} hoverStyle={styles.toolButtonActiveHover}>↩️ Назад</HoverButton>
-                        <HoverButton onClick={redo} disabled={!canRedo} style={{ ...styles.buttonBase, padding: '10px 20px', fontSize: '1em', ...(!canRedo ? styles.toolButtonInactive : styles.toolButtonActive) }} hoverStyle={styles.toolButtonActiveHover}>↪️ Вперед</HoverButton>
-                    </div>
-                </div>
-            </div>
+            )}
             <Tutorial show={showTutorial} onClose={() => setShowTutorial(false)} />
             <GraphicsSettingsModal show={showGraphicsSettings} onClose={() => setShowGraphicsSettings(false)} settings={graphicsSettings} onSettingsChange={handleGraphicsSettingsChange} onPresetChange={handlePresetChange} />
             <Modal show={showModal} title={modalContent.title} message={modalContent.message} onClose={() => setShowModal(false)} onConfirm={modalContent.onConfirm} isConfirm={modalContent.isConfirm} />
-            <ContextMenu
-                menuState={contextMenu}
-                onAction={handleContextMenuAction}
-                onColorSelect={paintObject}
-                baseColors={BASE_COLORS}
-                userColors={userColors}
-                customColor={customColor}
-                setCustomColor={setCustomColor}
-                addUserColor={addUserColor}
-            />
+            {!isTestDrive && (
+                <ContextMenu
+                    menuState={contextMenu}
+                    onAction={handleContextMenuAction}
+                    onColorSelect={paintObject}
+                    baseColors={BASE_COLORS}
+                    userColors={userColors}
+                    customColor={customColor}
+                    setCustomColor={setCustomColor}
+                    addUserColor={addUserColor}
+                    onRotationChange={handleRotationChange}
+                    furniture={furniture}
+                    walls={walls}
+                />
+            )}
         </div>
     );
 }
