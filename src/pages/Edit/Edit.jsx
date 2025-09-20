@@ -632,6 +632,80 @@ const ContextMenu = ({ menuState, onAction, onColorSelect, baseColors, userColor
     );
 };
 
+const RmcAiModal = ({ show, onClose, onGenerate }) => {
+    const [roomType, setRoomType] = useState('Вітальня');
+    const [roomSize, setRoomSize] = useState('Середня');
+    const [roomStyle, setRoomStyle] = useState('Сучасний');
+
+    if (!show) return null;
+
+    const handleGenerate = () => {
+        onGenerate(roomType, roomSize, roomStyle);
+        onClose();
+    };
+
+    const selectStyle = {
+        width: '100%',
+        padding: '12px',
+        backgroundColor: 'var(--primary-dark)',
+        border: '1px solid var(--primary-darker)',
+        borderRadius: '8px',
+        color: 'var(--text-color-light)',
+        fontSize: '1em',
+        boxSizing: 'border-box',
+    };
+
+    return (
+        <div style={styles.tutorialModal}>
+            <div style={{ ...styles.tutorialContent, maxWidth: '500px', gap: '20px' }}>
+                <h2 style={styles.tutorialTitle}>🤖 RMC AI Генератор Кімнат</h2>
+                <p style={styles.tutorialText}>
+                    Виберіть параметри, і ШІ створить для вас кімнату.
+                    <br />
+                    <strong style={{ color: '#EF4444' }}>Увага:</strong> Ця дія видалить ваш поточний дизайн.
+                </p>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left' }}>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '5px' }}>Тип кімнати</label>
+                        <select value={roomType} onChange={(e) => setRoomType(e.target.value)} style={selectStyle}>
+                            <option>Вітальня</option>
+                            <option>Спальня</option>
+                            <option>Кухня</option>
+                            <option>Офіс</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '5px' }}>Розмір кімнати</label>
+                        <select value={roomSize} onChange={(e) => setRoomSize(e.target.value)} style={selectStyle}>
+                            <option>Маленька</option>
+                            <option>Середня</option>
+                            <option>Велика</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '5px' }}>Стиль</label>
+                        <select value={roomStyle} onChange={(e) => setRoomStyle(e.target.value)} style={selectStyle}>
+                            <option>Сучасний</option>
+                            <option>Затишний</option>
+                            <option>Мінімалізм</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+                    <HoverButton onClick={onClose} style={{ ...styles.buttonBase, ...styles.tutorialSkipButton, padding: '10px 20px' }} hoverStyle={styles.tutorialSkipButtonHover}>
+                        Скасувати
+                    </HoverButton>
+                    <HoverButton onClick={handleGenerate} style={{ ...styles.buttonBase, ...styles.tutorialNextButton, padding: '10px 20px' }} hoverStyle={styles.tutorialNextButtonHover}>
+                        Згенерувати
+                    </HoverButton>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const Material = ({ isPhantom, ...props }) => {
     return isPhantom ? <primitive object={phantomMaterial} attach="material" /> : <meshStandardMaterial {...props} />;
 };
@@ -1436,59 +1510,59 @@ const Console = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
 
 const ComputerSetup = React.memo(({ color, rotation, isHighlighted, isPhantom }) => (
   <group rotation={[0, rotation, 0]}>
-    {/* Столешница */}
+    {/* Стільниця */}
     <mesh position={[0, 0.4, 0]}>
       <boxGeometry args={[1.6, 0.05, 0.7]} />
       <Material isPhantom={isPhantom} color={color} metalness={0.2} roughness={0.6} />
     </mesh>
 
-    {/* Ножки стола */}
+    {/* Ніжки столу */}
     {[[-0.75, 0.35], [0.75, 0.35], [-0.75, -0.35], [0.75, -0.35]].map(([x, z], i) => (
       <mesh key={i} position={[x, 0.2, z]}>
         <cylinderGeometry args={[0.03, 0.03, 0.4, 12]} />
-        <Material isPhantom={isPhantom} color="#2C3A59" metalness={0.3} roughness={0.5} />
+        <Material isPhantom={isPhantom} color={"#2C3A59"} metalness={0.3} roughness={0.5} />
       </mesh>
     ))}
 
-    {/* Монитор на кронштейне */}
+    {/* Монітор на кронштейні */}
     <group position={[0, 0.85, -0.2]}>
       <mesh>
         <boxGeometry args={[0.7, 0.4, 0.05]} />
-        <Material isPhantom={isPhantom} color="#2C3A59" metalness={0.4} roughness={0.4} />
+        <Material isPhantom={isPhantom} color={"#2C3A59"} metalness={0.4} roughness={0.4} />
       </mesh>
       <mesh position={[0, 0, 0.025]}>
         <boxGeometry args={[0.65, 0.35, 0.01]} />
-        <Material isPhantom={isPhantom} color="#111111" metalness={0.5} roughness={0.2} />
+        <Material isPhantom={isPhantom} color={"#111111"} metalness={0.5} roughness={0.2} />
       </mesh>
       <mesh position={[0, -0.25, 0]}>
         <cylinderGeometry args={[0.02, 0.02, 0.3, 12]} />
-        <Material isPhantom={isPhantom} color="#4B5563" metalness={0.6} roughness={0.3} />
+        <Material isPhantom={isPhantom} color={"#4B5563"} metalness={0.6} roughness={0.3} />
       </mesh>
     </group>
 
-    {/* Компактный системник на столе слева */}
+    {/* Компактний системний блок на столі зліва */}
     <mesh position={[-0.55, 0.55, 0]}>
       <boxGeometry args={[0.25, 0.45, 0.35]} />
-      <Material isPhantom={isPhantom} color="#2C3A59" metalness={0.3} roughness={0.5} />
+      <Material isPhantom={isPhantom} color={"#2C3A59"} metalness={0.3} roughness={0.5} />
     </mesh>
     <mesh position={[-0.55, 0.55, 0]}>
       <boxGeometry args={[0.23, 0.42, 0.32]} />
-      <Material isPhantom={isPhantom} color="#111111" metalness={0.5} roughness={0.2} />
+      <Material isPhantom={isPhantom} color={"#111111"} metalness={0.5} roughness={0.2} />
     </mesh>
 
-    {/* Клавиатура */}
+    {/* Клавіатура */}
     <mesh position={[0.2, 0.43, 0.15]}>
       <boxGeometry args={[0.5, 0.02, 0.15]} />
-      <Material isPhantom={isPhantom} color="#4B5563" metalness={0.2} roughness={0.6} />
+      <Material isPhantom={isPhantom} color={"#4B5563"} metalness={0.2} roughness={0.6} />
     </mesh>
 
-    {/* Мышь */}
+    {/* Миша */}
     <mesh position={[0.6, 0.43, 0.2]}>
       <boxGeometry args={[0.1, 0.02, 0.07]} />
-      <Material isPhantom={isPhantom} color="#111111" metalness={0.5} roughness={0.3} />
+      <Material isPhantom={isPhantom} color={"#111111"} metalness={0.5} roughness={0.3} />
     </mesh>
 
-    {isHighlighted && <Outlines thickness={0.02} color="#FFFF00" opacity={1} />}
+    {isHighlighted && <Outlines thickness={0.02} color={"#FFFF00"} opacity={1} />}
   </group>
 ));
 
@@ -2198,6 +2272,7 @@ export default function Edit() {
     const [isLoading, setIsLoading] = useState(true);
     const [isTestDrive, setIsTestDrive] = useState(false);
     const [isTestDriveLoading, setIsTestDriveLoading] = useState(false);
+    const [showAiModal, setShowAiModal] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -2601,6 +2676,116 @@ export default function Edit() {
         };
     }, [contextMenu.visible]);
 
+    const generateRoomWithAI = useCallback((roomType, roomSize, style) => {
+        setModalContent({
+            title: 'Підтвердження',
+            message: 'Ви впевнені, що хочете згенерувати нову кімнату? Всі поточні зміни будуть видалені.',
+            isConfirm: true,
+            onConfirm: () => {
+                setShowModal(false);
+                setIsLoading(true); // Show preloader
+
+                setTimeout(() => { // Simulate generation time
+                    const palettes = {
+                        'Сучасний': { wall: '#EAEAEA', floor: '#C0C0C0', furniture: ['#34495E', '#95A5A6'] },
+                        'Затишний': { wall: '#F5DEB3', floor: '#A0522D', furniture: ['#D2B48C', '#8B4513'] },
+                        'Мінімалізм': { wall: '#FFFFFF', floor: '#F5F5F5', furniture: ['#2C3E50', '#BDC3C7'] }
+                    };
+
+                    const furnitureSets = {
+                        'Вітальня': ['sofa', 'coffeeTable', 'tv', 'lamp', 'pottedPlant'],
+                        'Спальня': ['bed', 'wardrobe', 'nightstand', 'dresser', 'rug'],
+                        'Кухня': ['kitchenTable', 'kitchenCabinet', 'diningChair', 'diningChair', 'sink'],
+                        'Офіс': ['desk', 'officeChair', 'bookshelf', 'filingCabinet', 'lamp']
+                    };
+
+                    const palette = palettes[style];
+                    const furnitureSet = furnitureSets[roomType];
+
+                    let width, depth;
+                    switch (roomSize) {
+                        case 'Маленька': width = 6; depth = 6; break;
+                        case 'Велика': width = 12; depth = 10; break;
+                        default: width = 8; depth = 10; break;
+                    }
+
+                    const newWalls = {};
+                    const newFloorTiles = {};
+                    const newFurniture = {};
+
+                    const startX = -Math.floor(width / 2);
+                    const startZ = -Math.floor(depth / 2);
+
+                    // Create floor and walls
+                    for (let x = startX; x < startX + width; x++) {
+                        for (let z = startZ; z < startZ + depth; z++) {
+                            const key = getKey(x, z);
+                            newFloorTiles[key] = palette.floor;
+                            if (x === startX || x === startX + width - 1 || z === startZ || z === startZ + depth - 1) {
+                                newWalls[key] = { type: TOOL_TYPES.wall, color: palette.wall, hasOpening: false };
+                            }
+                        }
+                    }
+
+                    // Add a door
+                    const doorZ = startZ + Math.floor(depth / 2);
+                    const doorKey = getKey(startX, doorZ);
+                    if(newWalls[doorKey]) {
+                        newWalls[doorKey].hasOpening = true;
+                        newFurniture[doorKey] = { type: 'door', color: '#8B4513', rotation: Math.PI / 2 };
+                    }
+
+                    // Add a window
+                    const windowX = startX + Math.floor(width / 2);
+                    const windowKey = getKey(windowX, startZ);
+                    if(newWalls[windowKey]) {
+                        newWalls[windowKey].hasOpening = true;
+                        newFurniture[windowKey] = { type: 'window', color: '#A0AEC0', rotation: 0 };
+                    }
+
+                    // Place furniture
+                    const occupied = new Set([doorKey, windowKey]);
+                    furnitureSet.forEach((itemType, index) => {
+                        const itemInfo = allFurnitureItems.find(i => i.type === itemType);
+                        if (!itemInfo) return;
+
+                        let placed = false;
+                        // Try placing against a wall first for large items
+                        if (['sofa', 'bed', 'desk', 'wardrobe', 'bookshelf', 'kitchenCabinet', 'tv'].includes(itemType)) {
+                            for (let i = 0; i < 50 && !placed; i++) { // 50 attempts
+                                const x = startX + 1 + Math.floor(Math.random() * (width - 2));
+                                const z = startZ + 1 + Math.floor(Math.random() * (depth - 2));
+                                const key = getKey(x,z);
+                                if (!occupied.has(key)) {
+                                    newFurniture[key] = { type: itemType, color: palette.furniture[index % palette.furniture.length], rotation: [0, Math.PI/2, Math.PI, 3*Math.PI/2][Math.floor(Math.random()*4)] };
+                                    occupied.add(key);
+                                    placed = true;
+                                }
+                            }
+                        }
+                        // Place anywhere else if failed or small item
+                        if (!placed) {
+                             for (let i = 0; i < 50 && !placed; i++) { // 50 attempts
+                                const x = startX + 1 + Math.floor(Math.random() * (width - 2));
+                                const z = startZ + 1 + Math.floor(Math.random() * (depth - 2));
+                                const key = getKey(x,z);
+                                if (!occupied.has(key)) {
+                                    newFurniture[key] = { type: itemType, color: palette.furniture[index % palette.furniture.length], rotation: Math.random() * 2 * Math.PI };
+                                    occupied.add(key);
+                                    placed = true;
+                                }
+                            }
+                        }
+                    });
+
+                    resetHistory({ walls: newWalls, furniture: newFurniture, floorTiles: newFloorTiles, userColors: [] });
+                    setIsLoading(false);
+                }, 1000);
+            }
+        });
+        setShowModal(true);
+    }, [resetHistory, getKey, allFurnitureItems]);
+
     function CanvasContent({
                                getKey, rotateObject, snapToWall, checkGridExpansion, selectedTool, selectedColor, furniture, walls, floorTiles, hoveredCell, setHoveredCell, updateState, isDragging, draggedType, draggedSubType, phantomObjectPosition, setPhantomObjectPosition, phantomObjectRotation, setPhantomObjectRotation, setIsDragging, setDraggedType, setDraggedSubType, handleContextMenu, keyPressed, targetCameraPosition, targetCameraQuaternion, mobileMovementInput, cameraRotationInput, cameraVerticalInput, updateNeighboringWindows, draggedItemData, setDraggedItemData, contextMenuTargetKey, graphicsSettings, isTestDrive
                            }) {
@@ -2649,7 +2834,7 @@ export default function Edit() {
             let newCameraPosition = camera.position.clone(); 
             const currentQuaternion = camera.quaternion;
             const forward = new Vector3(0, 0, -1).applyQuaternion(currentQuaternion); 
-            const right = new Vector3(1, 0, 0).applyQuaternion(currentQuaternion); 
+            const right = new Vector3(1, 0, 0).applyQuaternion(currentQuaternion);
             forward.y = 0; 
             right.y = 0; 
             forward.normalize(); 
@@ -3053,6 +3238,7 @@ export default function Edit() {
                     <HoverButton onClick={toggleTestDrive} style={{ ...styles.buttonBase, ...styles.saveButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.saveButtonHover}>{isTestDrive ? 'Вийти з Тест Драйву' : 'Тест Драйв'}</HoverButton>
                     {!isTestDrive && (
                         <>
+                            <HoverButton onClick={() => setShowAiModal(true)} style={{ ...styles.buttonBase, background: '#9b59b6', padding: '10px 20px', fontSize: '1em' }} hoverStyle={{ background: '#8e44ad' }}>🤖 RMC AI</HoverButton>
                             <HoverButton onClick={() => setShowGraphicsSettings(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em', background: '#6c757d' }} hoverStyle={{ ...styles.tutorialButtonHover, background: '#5a6268' }}>⚙️ Графіка</HoverButton>
                             <HoverButton onClick={() => setShowTutorial(true)} style={{ ...styles.buttonBase, ...styles.tutorialButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.tutorialButtonHover}>🎓 Туторіал</HoverButton>
                             <HoverButton onClick={resetAllState} style={{ ...styles.buttonBase, ...styles.clearButton, padding: '10px 20px', fontSize: '1em' }} hoverStyle={styles.clearButtonHover}>🗑️ Очистити</HoverButton>
@@ -3128,6 +3314,7 @@ export default function Edit() {
             )}
             <Tutorial show={showTutorial} onClose={() => setShowTutorial(false)} />
             <GraphicsSettingsModal show={showGraphicsSettings} onClose={() => setShowGraphicsSettings(false)} settings={graphicsSettings} onSettingsChange={handleGraphicsSettingsChange} onPresetChange={handlePresetChange} />
+            <RmcAiModal show={showAiModal} onClose={() => setShowAiModal(false)} onGenerate={generateRoomWithAI} />
             <Modal show={showModal} title={modalContent.title} message={modalContent.message} onClose={() => setShowModal(false)} onConfirm={modalContent.onConfirm} isConfirm={modalContent.isConfirm} />
             {!isTestDrive && (
                 <ContextMenu

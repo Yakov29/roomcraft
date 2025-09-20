@@ -3,7 +3,7 @@ import Container from "../Container/Container";
 import "./Hero.css";
 import { FaArrowDown } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
-import Logo from "../../logo.png";
+import Logo from "../../images/a6bd8a67-f3ca-4971-96e1-e0ba26802ace.png";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
